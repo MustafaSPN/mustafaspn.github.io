@@ -145,15 +145,34 @@ const ogImage = absoluteUrl('/og.png', Astro.site);
           return;
         }
 
+        // A record's photograph may still be decoding when its entrance animation
+        // fires. The block would then fade in empty and the image would snap in
+        // afterwards, which is what a slow connection shows. Holding the reveal
+        // until the image is ready makes the two arrive together; the timeout stops
+        // a slow or failed image from keeping the block hidden.
+        function reveal(el) {
+          var show = function () { el.classList.add('is-visible'); };
+          var img = el.querySelector('img');
+          if (!img || img.complete) { show(); return; }
+          img.addEventListener('load', show, { once: true });
+          img.addEventListener('error', show, { once: true });
+          setTimeout(show, 1200);
+        }
+
         var observer = new IntersectionObserver(
           function (entries) {
             entries.forEach(function (entry) {
               if (!entry.isIntersecting) return;
-              entry.target.classList.add('is-visible');
+              reveal(entry.target);
               observer.unobserve(entry.target);
             });
           },
-          { threshold: 0.12, rootMargin: '0px 0px -6% 0px' }
+          // threshold 0, not a fraction: a project record is taller than a phone
+          // viewport, so requiring a percentage of it to be visible fires the reveal
+          // long after its top edge has scrolled past. Triggering on first contact
+          // with a line just above the viewport bottom behaves the same for a short
+          // row and a tall record.
+          { threshold: 0, rootMargin: '0px 0px -8% 0px' }
         );
 
         for (var k = 0; k < targets.length; k++) observer.observe(targets[k]);
