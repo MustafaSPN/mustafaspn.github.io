@@ -485,6 +485,16 @@ figcaption {
   will-change: opacity, transform;
 }
 .reveal.is-visible { opacity: 1; transform: none; }
+.record > .reveal.is-visible { will-change: auto; }
+
+.media > .reveal-image {
+  opacity: 0;
+  transition: none;
+}
+.media > .reveal-image.is-ready {
+  opacity: 1;
+  transition: opacity 520ms var(--ease), transform 640ms var(--ease);
+}
 
 /* If scripting is unavailable the content must still be visible. */
 .no-js .reveal { opacity: 1; transform: none; }

@@ -16,8 +16,8 @@ const href = pageUrl(`/projects/${project.slug}`);
 const v = project.variant;
 ---
 
-<article class:list={['record', `record--${v}`, 'reveal']}>
-  <div class="record__head">
+<article class:list={['record', `record--${v}`]}>
+  <div class="record__head reveal">
     <span class="record__number" aria-hidden="true">{n}</span>
     <div class="record__titles">
       <h3 class="record__title">
@@ -32,7 +32,7 @@ const v = project.variant;
 
   {
     project.image && (
-      <div class="record__media">
+      <div class="record__media reveal">
         <Figure
           image={project.image}
           alt={project.imageAlt ?? ''}
@@ -54,7 +54,7 @@ const v = project.variant;
 
   {
     project.highlights && (
-      <dl class="record__highlights">
+      <dl class="record__highlights reveal">
         {project.highlights.map((h) => (
           <div class="record__highlight">
             <dt class="record__highlight-term">{h.term}</dt>
@@ -67,7 +67,7 @@ const v = project.variant;
 
   {
     v === 'data' && metrics.length > 0 && (
-      <ul class="record__metrics">
+      <ul class="record__metrics reveal">
         {metrics.map((m) => (
           <li class="record__metric">
             <span class="record__metric-value">
@@ -81,7 +81,7 @@ const v = project.variant;
     )
   }
 
-  <div class="record__body">
+  <div class="record__body reveal">
     <p class="record__result">{project.result}</p>
 
     <div class="record__foot">

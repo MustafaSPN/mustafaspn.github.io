@@ -145,18 +145,28 @@ const ogImage = absoluteUrl('/og.png', Astro.site);
           return;
         }
 
-        // A record's photograph may still be decoding when its entrance animation
-        // fires. The block would then fade in empty and the image would snap in
-        // afterwards, which is what a slow connection shows. Holding the reveal
-        // until the image is ready makes the two arrive together; the timeout stops
-        // a slow or failed image from keeping the block hidden.
+        // Keep photographs inside their own entrance until decoding finishes.
+        // On a slow connection text can enter without waiting for the media;
+        // the image still fades in if it arrives after the entrance timeout.
         function reveal(el) {
           var show = function () { el.classList.add('is-visible'); };
           var img = el.querySelector('img');
-          if (!img || img.complete) { show(); return; }
-          img.addEventListener('load', show, { once: true });
-          img.addEventListener('error', show, { once: true });
-          setTimeout(show, 1200);
+          if (!img) { show(); return; }
+          img.classList.add('reveal-image');
+          var timer;
+          var ready = function () {
+            var finish = function () {
+              clearTimeout(timer);
+              img.classList.add('is-ready');
+              show();
+            };
+            if (img.decode && img.naturalWidth) img.decode().then(finish, finish);
+            else finish();
+          };
+          if (img.complete) { ready(); return; }
+          img.addEventListener('load', ready, { once: true });
+          img.addEventListener('error', ready, { once: true });
+          timer = setTimeout(show, 1200);
         }
 
         var observer = new IntersectionObserver(
