@@ -1,0 +1,78 @@
+---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { withBase } from '../lib/paths';
+
+interface Props {
+  image?: ImageMetadata;
+  alt?: string;
+  video?: { src: string; poster: string; width: number; height: number };
+  caption?: string;
+  /** Aspect ratio for the media well; omit to use the image's own ratio. */
+  ratio?: string;
+  /** Contain rather than cover — for architecture diagrams. */
+  contain?: boolean;
+  zoom?: boolean;
+  /** Widths handed to the image pipeline. */
+  widths?: number[];
+  sizes?: string;
+  loading?: 'lazy' | 'eager';
+  /** CSS object-position for the image, e.g. "center 68%". */
+  position?: string;
+  class?: string;
+}
+
+const {
+  image,
+  alt = '',
+  video,
+  caption,
+  ratio,
+  contain = false,
+  zoom = false,
+  widths,
+  sizes = '(min-width: 1440px) 1400px, 100vw',
+  loading = 'lazy',
+  position,
+  class: className,
+} = Astro.props;
+
+const wellStyle = ratio ? `aspect-ratio:${ratio};` : undefined;
+---
+
+<figure class={className}>
+  <div
+    class:list={['media', contain && 'media--contain', zoom && 'media--zoom']}
+    style={wellStyle}
+  >
+    {
+      video ? (
+        <video
+          data-autoplay
+          data-src={withBase(video.src)}
+          muted
+          loop
+          playsinline
+          preload="none"
+          width={video.width}
+          height={video.height}
+          poster={withBase(video.poster)}
+          aria-label={alt}
+        >
+          <a href={withBase(video.src)}>{alt}</a>
+        </video>
+      ) : image ? (
+        <Image
+          src={image}
+          alt={alt}
+          widths={widths ?? [640, 960, 1280, image.width]}
+          sizes={sizes}
+          loading={loading}
+          decoding="async"
+          style={position ? `object-position:${position}` : undefined}
+        />
+      ) : null
+    }
+  </div>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

@@ -1,0 +1,80 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { publishedProjects, projectNumber } from '../data/projects';
+import { site } from '../data/site';
+import { pageUrl, withBase } from '../lib/paths';
+---
+
+<BaseLayout
+  title={`Page not found — ${site.name}`}
+  description="That page does not exist."
+  path="/404"
+>
+  <section class="notfound shell">
+    <p class="label notfound__code">Error 404</p>
+    <h1 class="notfound__title">No route to that page.</h1>
+    <p class="lead notfound__body">
+      The address does not match anything on this site. The work is listed below.
+    </p>
+
+    <ul class="notfound__list">
+      {
+        publishedProjects.map((p) => (
+          <li class="notfound__item">
+            <a class="link notfound__link" href={pageUrl(`/projects/${p.slug}`)}>
+              <span class="notfound__num" aria-hidden="true">{projectNumber(p.slug)}</span>
+              {p.title}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="notfound__home">
+      <a class="button button--primary" href={withBase('/')}>Back to the homepage</a>
+    </p>
+  </section>
+</BaseLayout>
+
+<style>
+  .notfound { padding-block: clamp(64px, 12vw, 160px); }
+  .notfound__code { display: block; color: var(--accent); margin-bottom: var(--s5); }
+
+  .notfound__title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--fs-display);
+    letter-spacing: -0.035em;
+    line-height: 1;
+  }
+
+  .notfound__body { margin-top: var(--s5); max-width: 44ch; }
+
+  .notfound__list {
+    margin-top: var(--s8);
+    border-top: 1px solid var(--rule);
+    display: grid;
+  }
+
+  .notfound__item { border-bottom: 1px solid var(--rule); }
+
+  .notfound__link {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s5);
+    padding-block: var(--s4);
+    font-family: var(--font-display);
+    font-size: var(--fs-h3);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  .notfound__num {
+    font-family: var(--font-mono);
+    font-size: var(--fs-label);
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+  }
+
+  .notfound__home { margin-top: var(--s8); }
+</style>

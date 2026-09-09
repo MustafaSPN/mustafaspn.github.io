@@ -1,0 +1,15 @@
+---
+interface Props {
+  /** Two-digit section index, e.g. "03". */
+  index: string;
+  label: string;
+  id?: string;
+}
+
+const { index, label, id } = Astro.props;
+---
+
+<div class="section-rule" id={id}>
+  <span class="section-rule__index" aria-hidden="true">{index}</span>
+  <h2 class="section-rule__label">{label}</h2>
+</div>

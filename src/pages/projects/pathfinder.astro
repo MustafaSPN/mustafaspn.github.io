@@ -1,0 +1,536 @@
+---
+import CaseStudyLayout from '../../layouts/CaseStudyLayout.astro';
+import CaseSection from '../../components/CaseSection.astro';
+import Figure from '../../components/Figure.astro';
+import SpecTable from '../../components/SpecTable.astro';
+import { getProject } from '../../data/projects';
+
+import trackedHero from '../../assets/media/tracked-hero.jpg';
+import trackedDetail from '../../assets/media/tracked-detail.jpg';
+import trackedElectronics from '../../assets/media/tracked-electronics.jpg';
+import rover4x4Field from '../../assets/media/rover4x4-field.jpg';
+import rcCrawlerBuild from '../../assets/media/rc-crawler-build.jpg';
+import architecture from '../../assets/media/pathfinder-architecture-detailed.png';
+
+const project = getProject('pathfinder');
+
+const stack = [
+  { group: 'Autonomy', items: ['ROS 2 Humble', 'Nav2', 'NavFn planner', 'Regulated Pure Pursuit', 'twist_mux'] },
+  { group: 'Localization', items: ['robot_localization', 'Dual EKF', 'navsat_transform', 'RTK GNSS', 'Dual-antenna heading', 'NTRIP client', 'BNO055 IMU'] },
+  { group: 'Embedded', items: ['ESP32-S3', 'micro-ROS', 'RoboClaw controllers', 'Wheel encoders'] },
+  { group: 'Platform', items: ['Raspberry Pi 5', 'Docker', 'C++', 'Python', 'FastAPI', 'Leaflet', 'CycloneDDS'] },
+];
+---
+
+<CaseStudyLayout
+  project={project}
+  extraMeta={[{ term: 'Vehicles', value: 'Three, one shared stack' }, { term: 'Testing', value: 'Physical hardware, outdoors' }]}
+  hero={{
+    image: trackedHero,
+    alt:
+      'The tracked skid-steer UGV outdoors on wet ground, with its roof-mounted dual GNSS ' +
+      'antenna mast, during an autonomous waypoint run.',
+    caption: 'Tracked UGV — the largest of the three platforms, running an outdoor waypoint mission.',
+  }}
+  stack={stack}
+>
+  <CaseSection label="The problem" aside="One stack, three vehicles">
+    <p class="lead">
+      Outdoor autonomy stacks tend to be written for one robot. The kinematics, the sensor
+      set and the tuning end up braided through the navigation code, and moving to a second
+      platform means rewriting rather than reconfiguring.
+    </p>
+    <p>
+      Pathfinder is the opposite exercise. One ROS 2 autonomy architecture — dual-EKF RTK
+      localization, Nav2 waypoint navigation and a micro-ROS motor interface — is carried
+      across three physically different ground vehicles: a tracked skid-steer UGV, a 4×4
+      differential rover, and an Ackermann RC crawler with no wheel encoders at all.
+    </p>
+    <p>
+      Each vehicle is maintained on its own branch with its own kinematics, sensor set and
+      field-validated tuning. What has to stay identical is everything above the motor
+      interface. What is allowed to change is configuration.
+    </p>
+  </CaseSection>
+
+  <CaseSection label="The system" aside="Sensing → localization → navigation → motors">
+    <p>
+      Every vehicle runs a Raspberry Pi 5 with ROS 2 Humble in Docker, an RTK GNSS receiver
+      providing position and dual-antenna heading, a BNO055 IMU over UART, and an ESP32-S3
+      running micro-ROS behind the motor interface.
+    </p>
+    <p>
+      Localization is a <strong>dual EKF</strong> from <code>robot_localization</code>. A local
+      filter fuses wheel odometry and gyro to publish a smooth, continuous
+      <code>odom → base_link</code>. A global filter fuses RTK position and absolute GNSS
+      heading to publish <code>map → odom</code>, anchoring everything to real-world
+      coordinates. <code>navsat_transform</code> converts latitude and longitude into the map
+      frame between them.
+    </p>
+    <p>
+      Nav2 plans with NavFn and tracks with a Regulated Pure Pursuit controller, retuned per
+      vehicle. <code>twist_mux</code> arbitrates between navigation, the operator joystick and
+      the emergency stop, and publishes the result on <code>/cmd_vel_out</code>.
+    </p>
+  </CaseSection>
+
+  <CaseSection label="Architecture" aside="The abstraction boundary is two topics" wide>
+    <div class="measure">
+      <p>
+        The boundary between shared autonomy and vehicle-specific hardware is exactly two
+        topics: <code>/cmd_vel_out</code> going down, and <code>/odom_esp</code> coming back.
+      </p>
+      <p>
+        Everything above that line — the dual EKF, <code>navsat_transform</code>, Nav2, the
+        mission console — is identical across the fleet. Everything below it is the vehicle:
+        tracks, four wheels, or a steering servo. Porting to a new platform means writing the
+        firmware behind the boundary and retuning the layer above it, not rewriting the
+        autonomy.
+      </p>
+    </div>
+
+    <Figure
+      class="case-figure"
+      image={architecture}
+      alt="Detailed Pathfinder autonomy architecture. RTK GNSS, a BNO055 IMU and wheel odometry feed a local EKF; the local EKF and GNSS feed navsat_transform and a global EKF; the global EKF feeds Nav2, which feeds twist_mux and the /cmd_vel_out topic, consumed by an ESP32-S3 running micro-ROS and then the vehicle-specific motor interface. A web mission console attaches to Nav2."
+      contain
+      caption="Localization, navigation and the embedded boundary. Diagram from the project repository."
+      sizes="(min-width: 1024px) 900px, 100vw"
+    />
+  </CaseSection>
+
+  <CaseSection label="Engineering work" aside="What I implemented">
+    <p>
+      The autonomy stack, the localization configuration and the operator tooling, carried
+      across all three platforms:
+    </p>
+    <ul class="bullets">
+      <li>
+        A custom ROS 2 driver for the dual-antenna RTK GNSS receiver — binary protocol
+        parsing, position and absolute heading, and an integrated NTRIP client injecting RTK
+        corrections in real time.
+      </li>
+      <li>
+        Dual-EKF localization in <code>robot_localization</code>: separating relative gyro yaw
+        from absolute GNSS heading across the local and global filters, and configuring
+        <code>navsat_transform</code> so the map frame is anchored correctly.
+      </li>
+      <li>
+        A datum node that waits for several consistent RTK-fixed positions <em>and</em> a valid
+        heading before fixing the map origin, so one bad fix during acquisition cannot offset
+        the entire map.
+      </li>
+      <li>
+        Nav2 bring-up and per-vehicle tuning — planner and controller configuration, costmap
+        footprints, kinematic limits, and behaviour-tree selection.
+      </li>
+      <li>
+        The <code>/cmd_vel_out</code> and <code>/odom_esp</code> boundary to the ESP32-S3
+        micro-ROS motor interface, plus a yaw-priority velocity budget enforced in firmware.
+      </li>
+      <li>
+        A browser-based mission console: a FastAPI and WebSocket backend bridging ROS 2 to a
+        Leaflet map front end for waypoint missions, live telemetry and emergency stop.
+      </li>
+      <li>
+        Field tooling — wheel-odometry scale calibrated against pure RTK displacement, and
+        JSONL mission recording so tuning changes are argued from logs rather than
+        impressions.
+      </li>
+    </ul>
+  </CaseSection>
+
+  <!-- ===================== VEHICLES ===================== -->
+
+  <section class="vehicles reveal" aria-labelledby="vehicles">
+    <div class="section-rule">
+      <span class="section-rule__index" aria-hidden="true">§</span>
+      <h2 class="section-rule__label" id="vehicles">The vehicles</h2>
+    </div>
+
+    <p class="vehicles__intro lead measure">
+      Three platforms, three drive geometries, three different reasons the localization stack
+      had to be argued from first principles.
+    </p>
+
+    <!-- ---------- 01 tracked ---------- -->
+    <article class="vehicle">
+      <header class="vehicle__head">
+        <span class="vehicle__number label" aria-hidden="true">Vehicle 01</span>
+        <h3 class="vehicle__title h2">Tracked UGV</h3>
+        <p class="vehicle__line mono">Tracked skid-steer · 1.0 × 0.74 m · 0.625 m between track centrelines</p>
+      </header>
+
+      <div class="vehicle__grid">
+        <div class="vehicle__media">
+          <Figure
+            video={{ src: '/media/tracked-demo.mp4', poster: '/media/tracked-demo-poster.jpg', width: 460, height: 298 }}
+            alt="The tracked UGV driving an autonomous waypoint mission outdoors."
+            caption="Autonomous waypoint mission — tracked skid-steer platform."
+            zoom
+          />
+        </div>
+
+        <div class="vehicle__spec">
+          <SpecTable
+            rows={[
+              ['Drive', 'Tracked, differential / skid-steer'],
+              ['Compute', 'Raspberry Pi 5 · ROS 2 Humble in Docker'],
+              ['Motor control', 'ESP32-S3 micro-ROS bridge to the drive controllers'],
+              ['Positioning', 'RTK GNSS at 20 Hz with dual-antenna heading'],
+              ['IMU', 'BNO055 over UART'],
+              ['Perception', 'Hesai XT16 3D LiDAR — visualisation only'],
+              ['Localization', 'Dual EKF — wheel odometry and gyro locally, RTK and GNSS heading globally'],
+              ['Navigation', 'Nav2, Regulated Pure Pursuit, ~0.95 m/s target, plus a planner-free straight-line mode'],
+            ]}
+          />
+        </div>
+      </div>
+
+      <div class="vehicle__prose rail">
+        <p class="mono vehicle__aside">Challenge —<br />velocity budgeting</p>
+        <div class="prose measure">
+          <p>
+            On a skid-steer platform each track's speed is the sum of the body's linear and
+            angular commands:
+          </p>
+          <p class="formula">v<sub>track</sub> = v ± ω · (track separation / 2)</p>
+          <p>
+            Ask for speed and yaw at the same time and the outer track saturates, the turn
+            degrades, and the vehicle drifts off the path. The fix is a yaw-priority budget
+            enforced in firmware: the commanded turn rate is always delivered in full, and
+            forward speed is clipped to whatever headroom remains. Nav2's regulated speed
+            scaling handles it feed-forward; the firmware budget guarantees it.
+          </p>
+          <p>
+            Streaming the LiDAR's 2.4 MB point cloud at 10 Hz over the vehicle's own WiFi
+            needed CycloneDDS tuning — unicast data with multicast limited to discovery, and a
+            10 MB socket receive buffer — to stop fragment loss.
+          </p>
+          <p class="note">
+            The LiDAR feeds the mission console's 2D obstacle view. It is not wired into the
+            Nav2 costmaps, and this vehicle does not perform autonomous obstacle avoidance.
+          </p>
+        </div>
+      </div>
+
+      <div class="vehicle__gallery">
+        <Figure
+          image={trackedDetail}
+          alt="Close view of the tracked UGV's running gear and its roof-mounted GNSS antenna, operating in wet weather."
+          caption="Running gear and roof-mounted GNSS antenna, wet-weather operation."
+          ratio="4 / 3"
+          zoom
+        />
+        <Figure
+          image={trackedElectronics}
+          alt="The tracked UGV's open electronics bay during integration, showing the Raspberry Pi, a network switch and the motor controllers."
+          caption="Compute and power bay during integration — Raspberry Pi, network switch, motor controllers."
+          ratio="4 / 3"
+          zoom
+        />
+      </div>
+    </article>
+
+    <!-- ---------- 02 4x4 ---------- -->
+    <article class="vehicle">
+      <header class="vehicle__head">
+        <span class="vehicle__number label" aria-hidden="true">Vehicle 02</span>
+        <h3 class="vehicle__title h2">4×4 UGV</h3>
+        <p class="vehicle__line mono">4-wheel differential · 0.5 × 0.4 m · where the localization stack was brought to a working state</p>
+      </header>
+
+      <div class="vehicle__grid">
+        <div class="vehicle__media">
+          <Figure
+            video={{ src: '/media/rover4x4-demo.mp4', poster: '/media/rover4x4-demo-poster.jpg', width: 480, height: 322 }}
+            alt="The 4x4 differential rover driving an autonomous waypoint mission outdoors."
+            caption="Autonomous waypoint mission — 4×4 differential rover."
+            zoom
+          />
+        </div>
+
+        <div class="vehicle__spec">
+          <SpecTable
+            rows={[
+              ['Drive', '4-wheel differential (skid) drive'],
+              ['Compute', 'Raspberry Pi 5 · ROS 2 Humble in Docker'],
+              ['Motor control', 'ESP32-S3 micro-ROS → 2 × RoboClaw, closed-loop velocity on the controllers'],
+              ['Positioning', 'RTK GNSS with dual-antenna heading, binary protocol parsed in a custom driver'],
+              ['IMU', 'BNO055 over UART'],
+              ['Localization', 'Dual EKF — wheel odometry and gyro locally, RTK and GNSS heading globally'],
+              ['Navigation', 'Nav2, Regulated Pure Pursuit, 0.8 m/s target, rotate-to-heading enabled'],
+            ]}
+          />
+        </div>
+      </div>
+
+      <div class="vehicle__prose rail">
+        <p class="mono vehicle__aside">Challenge —<br />heading and datum correctness</p>
+        <div class="prose measure">
+          <p>
+            Outdoor GPS navigation fails in a specific and confusing way when heading is
+            wrong: the vehicle drives confidently in the wrong direction. This platform is
+            where that got solved, and the fix is a separation of two different yaw signals.
+          </p>
+          <p>
+            <strong>Relative gyro yaw</strong> feeds the local filter. It starts at zero
+            wherever the vehicle happens to be pointing, and it only has to be smooth — it
+            makes short-term motion continuous and jitter-free.
+          </p>
+          <p>
+            <strong>Absolute GNSS heading</strong>, from the dual-antenna receiver, feeds the
+            global filter. It is slower, but it is true north, and it is what anchors the map
+            frame.
+          </p>
+          <p>
+            Mixing them — or letting relative yaw into the global filter — produces a vehicle
+            that navigates smoothly along the wrong bearing. Keeping them in separate filters
+            is what makes waypoint missions land where they should.
+          </p>
+          <p>
+            The map origin is set the same way. A dedicated node waits for several consistent
+            RTK-fixed positions <em>and</em> a valid heading before it fixes the datum, so a
+            single bad fix during acquisition cannot offset the entire map.
+          </p>
+        </div>
+      </div>
+
+      <div class="vehicle__gallery vehicle__gallery--single">
+        <Figure
+          image={rover4x4Field}
+          alt="The 4x4 rover outdoors on a paved surface, with both GNSS antennas visible on its mast."
+          caption="Outdoor waypoint run; both GNSS antennas visible."
+          ratio="3 / 2"
+          zoom
+        />
+      </div>
+    </article>
+
+    <!-- ---------- 03 rc crawler ---------- -->
+    <article class="vehicle">
+      <header class="vehicle__head">
+        <span class="vehicle__number label" aria-hidden="true">Vehicle 03</span>
+        <h3 class="vehicle__title h2">RC Crawler</h3>
+        <p class="vehicle__line mono">Ackermann steering · 0.313 m wheelbase · up to 46° · no wheel encoders anywhere on the vehicle</p>
+      </header>
+
+      <div class="vehicle__grid">
+        <div class="vehicle__media">
+          <Figure
+            video={{ src: '/media/rc-crawler-demo.mp4', poster: '/media/rc-crawler-demo-poster.jpg', width: 480, height: 324 }}
+            alt="The Ackermann RC crawler driving an autonomous waypoint mission outdoors."
+            caption="Autonomous waypoint mission — Ackermann RC crawler."
+            zoom
+          />
+        </div>
+
+        <div class="vehicle__spec">
+          <SpecTable
+            rows={[
+              ['Drive', 'Ackermann steering, 0.313 m wheelbase, up to 46°'],
+              ['Compute', 'Raspberry Pi 5 · ROS 2 Humble in Docker'],
+              ['Motor control', 'ESP32-S3 micro-ROS bridge'],
+              ['Positioning', 'RTK GNSS at 20 Hz with dual-antenna heading'],
+              ['IMU', 'BNO055 over UART'],
+              ['Wheel odometry', 'None'],
+              ['Navigation', 'Nav2 tuned for non-holonomic motion — up to 1.6 m/s, reversing enabled, rotate-to-heading disabled, recovery-free behaviour trees'],
+            ]}
+          />
+        </div>
+      </div>
+
+      <div class="vehicle__prose rail">
+        <p class="mono vehicle__aside">Challenge —<br />localization with no odometry</p>
+        <div class="prose measure">
+          <p>
+            With no encoders there is no dead-reckoning source. The accelerometer is not a
+            substitute: integrating it twice with no absolute reference to correct against
+            guarantees the position runs away. So the local filter is deliberately reduced to
+            a heading estimator — gyro only, accelerometer explicitly disabled — and
+            <em>all</em> position information comes from RTK GNSS through the global filter.
+          </p>
+          <p>
+            That topology has a trap. If the GPS-derived odometry is published in the
+            <code>odom</code> frame and then fed back into the filter that produces
+            <code>map → odom</code>, the estimate reinforces its own error and the vehicle's
+            position drifts away without bound. Resolving it meant referencing the GPS
+            conversion to the global estimate so its output lands in the <code>map</code>
+            frame, breaking the loop.
+          </p>
+          <p>
+            The correction is documented at the point where it matters, and a diagnostic
+            script asserts on a live system that the fix is actually in effect — so the bug
+            cannot quietly return after a config change.
+          </p>
+          <p>
+            Nav2 needed matching treatment. A car cannot spin in place or shuffle backwards
+            out of trouble, so the default spin and back-up recoveries are removed entirely
+            and replaced with recovery-free behaviour trees, with reversing allowed as a
+            deliberate manoeuvre instead.
+          </p>
+        </div>
+      </div>
+
+      <div class="vehicle__gallery vehicle__gallery--single">
+        <Figure
+          image={rcCrawlerBuild}
+          alt="The RC crawler chassis during integration, showing the drivetrain, steering linkage and motor before the compute stack was fitted."
+          caption="Chassis during integration — drivetrain, steering and motor before the compute stack went on."
+          ratio="3 / 2"
+          zoom
+        />
+      </div>
+    </article>
+  </section>
+
+  <!-- ===================== CONSOLE ===================== -->
+
+  <CaseSection label="Mission console" aside="FastAPI · WebSocket · Leaflet" wide>
+    <div class="rail console">
+      <div class="console__media">
+        <Figure
+          video={{ src: '/media/web-console-demo.mp4', poster: '/media/web-console-demo-poster.jpg', width: 720, height: 452 }}
+          alt="The browser mission console: a map with placed waypoints, a driven track trace, and a live telemetry panel showing position, speed, heading and GNSS fix quality."
+          caption="Mission console — waypoints, live telemetry and track trace. Coordinates masked in the published clip."
+          zoom
+        />
+      </div>
+      <div class="prose console__body">
+        <p>
+          A FastAPI service bridges ROS 2 to a browser over WebSocket, with a Leaflet map front
+          end. Verified functionality:
+        </p>
+        <ul class="bullets">
+          <li>Click the map to append waypoints, drag to reorder, delete individually, then send the mission to Nav2.</li>
+          <li>Position, speed, heading and GNSS fix quality — including RTK FIX state — streamed continuously.</li>
+          <li>The driven path drawn on the map alongside the planned route.</li>
+          <li>Send, cancel, and an emergency stop that publishes a zero velocity command at the highest mux priority.</li>
+          <li>A manual on-screen joystick that drives the vehicle through the same arbitration chain.</li>
+        </ul>
+      </div>
+    </div>
+  </CaseSection>
+
+  <!-- ===================== RESULT ===================== -->
+
+  <CaseSection label="Result and scope" aside="What it does, and what it does not">
+    <p class="lead">
+      Three physical vehicles, three drive geometries, one autonomy architecture. All three
+      run outdoors on real hardware, navigating GPS waypoint missions with RTK-corrected GNSS
+      and dual-antenna heading.
+    </p>
+    <p>
+      The evidence is the footage above: every clip on this page is a physical vehicle
+      outdoors, not a simulator. Wheel-odometry scale was calibrated against pure RTK
+      displacement rather than estimated, and missions are recorded to JSONL — waypoints,
+      plan, pose, commands and RTK status — so tuning is argued from logs.
+    </p>
+
+    <div class="scope">
+      <h3 class="scope__title label">Scope limits</h3>
+      <ul class="bullets">
+        <li>Navigation is outdoor GPS waypoint following. There is <strong>no SLAM</strong> and no map building.</li>
+        <li>There is <strong>no simulation</strong> — all development and tuning was done on physical hardware outdoors.</li>
+        <li>The costmaps carry no obstacle sensor, so there is <strong>no autonomous obstacle avoidance</strong>. The tracked vehicle's LiDAR is a visualisation feed only.</li>
+        <li>Vehicles are maintained on <strong>separate branches</strong>, not selected at runtime from a single configurable package.</li>
+      </ul>
+    </div>
+  </CaseSection>
+</CaseStudyLayout>
+
+<style>
+  .bullets { display: grid; gap: var(--s3); }
+
+  .bullets li {
+    position: relative;
+    padding-left: var(--s5);
+    color: var(--text-secondary);
+  }
+
+  .bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 8px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .formula {
+    font-family: var(--font-mono);
+    font-size: var(--fs-small);
+    color: var(--text);
+    padding: var(--s4) var(--s5);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--bg-raised);
+  }
+
+  .note {
+    border-left: 1px solid var(--accent);
+    padding-left: var(--s5);
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+  }
+
+  .case-figure { margin-top: var(--s7); }
+
+  /* ---------------- vehicles ---------------- */
+
+  .vehicles { margin-top: clamp(56px, 8vw, 112px); }
+
+  .vehicles__intro { margin-bottom: clamp(40px, 6vw, 72px); }
+
+  .vehicle {
+    padding-top: clamp(40px, 5vw, 64px);
+    margin-top: clamp(48px, 7vw, 96px);
+    border-top: 1px solid var(--rule);
+  }
+
+  .vehicle__number { display: block; color: var(--accent); margin-bottom: var(--s3); }
+
+  .vehicle__line {
+    margin-top: var(--s3);
+    color: var(--text-muted);
+    line-height: 1.5;
+    max-width: 62ch;
+  }
+
+  .vehicle__grid {
+    display: grid;
+    gap: var(--s6);
+    margin-top: clamp(32px, 4vw, 48px);
+  }
+
+  .vehicle__prose { margin-top: clamp(40px, 5vw, 64px); }
+  .vehicle__aside { color: var(--text-muted); line-height: 1.6; }
+
+  .vehicle__gallery {
+    display: grid;
+    gap: var(--s5);
+    margin-top: clamp(32px, 4vw, 56px);
+  }
+
+  .console { align-items: start; }
+  .console__body { max-width: var(--measure); }
+
+  @media (min-width: 860px) {
+    .vehicle__grid { grid-template-columns: minmax(0, 6fr) minmax(0, 6fr); align-items: start; gap: clamp(24px, 3vw, 48px); }
+    .vehicle__gallery:not(.vehicle__gallery--single) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .vehicle__gallery--single { max-width: 62%; }
+  }
+
+  @media (min-width: 1024px) {
+    .console { grid-template-columns: minmax(0, 6fr) minmax(0, 6fr); }
+  }
+
+  .scope {
+    margin-top: var(--s7);
+    padding-top: var(--s5);
+    border-top: 1px solid var(--rule);
+  }
+
+  .scope__title { display: block; color: var(--accent); margin-bottom: var(--s4); }
+</style>

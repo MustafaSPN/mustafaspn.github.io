@@ -1,0 +1,216 @@
+---
+import CaseStudyLayout from '../../layouts/CaseStudyLayout.astro';
+import CaseSection from '../../components/CaseSection.astro';
+import ExternalLink from '../../components/ExternalLink.astro';
+import { getProject } from '../../data/projects';
+
+import architecture from '../../assets/media/motion-architecture.png';
+
+const project = getProject('motion-detection');
+
+const stack = [
+  { group: 'Classical', items: ['C++17', 'OpenCV', 'Farnebäck optical flow', 'Temporal filtering', 'Contour extraction'] },
+  { group: 'GPU', items: ['CUDA', 'OpenGL interop', 'OpenCV CUDA module', 'Custom component kernels', 'GLFW / GLEW'] },
+  { group: 'Learned', items: ['YOLO11n', 'Ultralytics', 'PyTorch', 'BoT-SORT tracking'] },
+  { group: 'Tooling', items: ['Python 3.10', 'CMake', 'NumPy'] },
+];
+
+const metrics = [
+  ['Precision', '0.599'],
+  ['Recall', '0.462'],
+  ['mAP@0.50', '0.496'],
+  ['mAP@0.50:0.95', '0.327'],
+];
+---
+
+<CaseStudyLayout
+  project={project}
+  extraMeta={[
+    { term: 'Context', value: 'UAV footage · simulation systems R&D' },
+    { term: 'Focus', value: 'Image perception only' },
+  ]}
+  hero={{
+    image: architecture,
+    alt: 'Motion detection pipeline diagram. A CPU path runs optical flow and temporal masking to produce region-centre markers; a CUDA path maps an OpenGL scene, runs GPU flow and component kernels and copies results back to a texture for display; and a YOLO11 path runs inference on video with supplied weights, with optional library tracking feeding an annotated display.',
+    contain: true,
+    caption: 'Three processing paths and the CPU/GPU boundaries between them. Diagram from the project repository.',
+  }}
+  stack={stack}
+>
+  <CaseSection label="The problem" aside="Two ways to notice something moved">
+    <p class="lead">
+      Optical flow provides motion cues without restricting detection to learned classes. A
+      trained detector recognises specific categories, and ignores everything else.
+    </p>
+    <p>
+      Those two approaches fail differently, and the difference matters for anything that has
+      to notice an object it was never trained on. This project builds three separate
+      implementations of the same problem — classical optical flow, an experimental
+      CUDA/OpenGL path, and a fine-tuned YOLO11 detector — in order to compare their failure
+      modes and the integration cost of rendered imagery with GPU processing.
+    </p>
+  </CaseSection>
+
+  <CaseSection label="The three implementations" aside="Different inputs, different algorithms" wide>
+    <div class="table-wrap">
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th scope="col">Component</th>
+            <th scope="col">Input</th>
+            <th scope="col">Processing and output</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Classical CPU</th>
+            <td>Local video</td>
+            <td>Farnebäck flow, temporal filtering, motion masks, bounding-box-centre markers</td>
+          </tr>
+          <tr>
+            <th scope="row">CUDA / OpenGL</th>
+            <td>Generated moving-circle scene</td>
+            <td>OpenCV CUDA flow, experimental component kernels, markers on a rendered texture</td>
+          </tr>
+          <tr>
+            <th scope="row">YOLO11</th>
+            <td>Local video and supplied weights</td>
+            <td>Learned object detections and optional library-provided tracking</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="measure prose paths">
+      <p>
+        <strong>CPU.</strong> Grayscale conversion and Gaussian blur precede dense optical flow.
+        A 10-frame average and spatial-median thresholds produce masks for contour-based region
+        extraction.
+      </p>
+      <p>
+        <strong>CUDA.</strong> The OpenGL texture is copied into a <code>GpuMat</code>,
+        processed, and copied back. Host orchestration and scalar reductions remain on the CPU.
+      </p>
+      <p>
+        <strong>YOLO.</strong> Frames pass through the detector and, in tracking mode, through
+        Ultralytics' BoT-SORT configuration. The recorded model covers six object classes.
+      </p>
+    </div>
+  </CaseSection>
+
+  <CaseSection label="Engineering work" aside="Implementation, integration, evaluation">
+    <ul class="bullets">
+      <li>Classical optical-flow processing, temporal motion filtering, and threshold experiments.</li>
+      <li>CUDA/OpenGL interoperability and integration of OpenCV CUDA operations.</li>
+      <li>Custom CUDA component-processing and marker-generation kernels.</li>
+      <li>YOLO11n fine-tuning configuration, and video inference and tracking integration.</li>
+      <li>Experimental comparison of classical motion cues against learned detections.</li>
+    </ul>
+    <p class="note">
+      Farnebäck optical flow, OpenCV, the YOLO11 architecture and pretrained weights,
+      Ultralytics training and inference, and BoT-SORT tracking are established third-party
+      foundations, not work of mine. The origin of adapted CUDA labelling code is still
+      unconfirmed and is documented as such in the repository.
+    </p>
+  </CaseSection>
+
+  <CaseSection label="Recorded results" aside="From the original experiment, not reproduced" wide>
+    <div class="results">
+      <div class="table-wrap results__table">
+        <table class="spec-table">
+          <tbody>
+            {
+              metrics.map(([k, v]) => (
+                <tr>
+                  <th scope="row">{k}</th>
+                  <td class="num">{v}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose measure">
+        <p class="note note--first">
+          These are <strong>recorded</strong> validation results from the original experiment.
+          They are not independently reproduced benchmark results.
+        </p>
+        <p>
+          YOLO11n was fine-tuned for 150 epochs at image size 640 and batch size 64. The saved
+          run used two Tesla T4 GPUs and evaluated 737 validation images.
+        </p>
+        <p>
+          Performance varied substantially by class: car mAP@0.50 was 0.918, while bicycle
+          mAP@0.50 was 0.106. The
+          <ExternalLink href="https://github.com/MustafaSPN/motion-detection-cuda-yolo/blob/main/docs/evaluation.md">
+            evaluation notes
+          </ExternalLink>
+          carry the full class breakdown, the limits of the evidence, and a proposed controlled
+          comparison.
+        </p>
+      </div>
+    </div>
+  </CaseSection>
+
+  <CaseSection label="Limitations" aside="Stated plainly">
+    <ul class="bullets">
+      <li>Classical motion analysis is sensitive to camera movement and to heuristic thresholds.</li>
+      <li>
+        The CPU and CUDA implementations differ in both inputs and algorithms, so their
+        historical frame-rate observations are not directly comparable.
+        <strong>No CUDA speedup is established by this project.</strong>
+      </li>
+      <li>
+        CUDA component labelling remains experimental, with concurrency and convergence
+        questions that require validation on the target system.
+      </li>
+      <li>
+        Ten numerical and mocked-boundary tests passed during preparation. They do not validate
+        actual OpenCV, YOLO or CUDA execution, and the CUDA build has not been verified in the
+        current environment.
+      </li>
+      <li>
+        The project covers image perception only. Live sensor, ROS, localization, navigation and
+        control integration are outside the supplied implementation.
+      </li>
+    </ul>
+  </CaseSection>
+</CaseStudyLayout>
+
+<style>
+  .bullets { display: grid; gap: var(--s3); }
+
+  .bullets li {
+    position: relative;
+    padding-left: var(--s5);
+    color: var(--text-secondary);
+  }
+
+  .bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 8px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .note {
+    border-left: 1px solid var(--accent);
+    padding-left: var(--s5);
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+  }
+
+  .note--first { margin-top: 0; }
+
+  .paths { margin-top: var(--s6); }
+
+  .results { display: grid; gap: clamp(32px, 5vw, 56px); align-items: start; }
+
+  @media (min-width: 1024px) {
+    .results { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); column-gap: clamp(32px, 4vw, 72px); }
+  }
+</style>

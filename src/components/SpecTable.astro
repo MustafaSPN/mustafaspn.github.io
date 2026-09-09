@@ -1,0 +1,40 @@
+---
+interface Props {
+  caption?: string;
+  /** Rows of [label, value]. Values may contain a numeric span. */
+  rows: [string, string][];
+  /** Render the value column in monospace accent — for measurements. */
+  numeric?: boolean;
+}
+
+const { caption, rows, numeric = false } = Astro.props;
+---
+
+<div class="table-wrap">
+  <table class="spec-table">
+    {caption && <caption class="spec-table__caption">{caption}</caption>}
+    <tbody>
+      {
+        rows.map(([label, value]) => (
+          <tr>
+            <th scope="row">{label}</th>
+            <td class:list={[numeric && 'num']}>{value}</td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .spec-table__caption {
+    text-align: left;
+    padding: var(--s3) var(--s4);
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--font-mono);
+    font-size: var(--fs-label);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+</style>

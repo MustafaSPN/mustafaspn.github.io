@@ -1,0 +1,164 @@
+---
+import { site, nav } from '../data/site';
+import { withBase } from '../lib/paths';
+---
+
+<header class="header">
+  <div class="shell header__inner">
+    <a class="header__mark" href={withBase('/')}>
+      <span class="header__name">Mustafa Sepen</span>
+      <span class="header__role">Robotics Software Engineer</span>
+    </a>
+
+    <nav class="header__nav" aria-label="Primary">
+      <ul class="header__list">
+        {
+          nav.map((item) => (
+            <li class:list={['header__item', !item.primaryMobile && 'header__item--wide']}>
+              <a class="header__link" href={withBase(item.href)}>
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+
+      <span class="header__sep" aria-hidden="true"></span>
+
+      <ul class="header__list header__list--external">
+        <li class="header__item header__item--wide">
+          <a class="header__link" href={site.github} rel="me noopener noreferrer" target="_blank">
+            GitHub
+          </a>
+        </li>
+        {
+          site.linkedin && (
+            <li class="header__item header__item--wide">
+              <a class="header__link" href={site.linkedin} rel="me noopener noreferrer" target="_blank">
+                LinkedIn
+              </a>
+            </li>
+          )
+        }
+        <li class="header__item">
+          <a class="header__link header__link--cv" href={withBase(site.cv)}>CV</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .header__inner {
+    min-height: var(--header-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s4);
+  }
+
+  .header__mark {
+    text-decoration: none;
+    display: flex;
+    align-items: baseline;
+    gap: var(--s3);
+    min-width: 0;
+    /* Baseline alignment is kept for the wordmark, so the 44px touch height comes
+       from padding rather than from centring the two labels. */
+    padding-block: var(--s3);
+  }
+
+  .header__name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    letter-spacing: -0.015em;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  /* The role sits beside the name as a document subtitle, not as a tagline. */
+  .header__role {
+    display: none;
+    font-family: var(--font-mono);
+    font-size: var(--fs-label);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .header__nav {
+    display: flex;
+    align-items: center;
+    gap: var(--s4);
+  }
+
+  .header__list {
+    display: flex;
+    align-items: center;
+    gap: var(--s5);
+  }
+
+  .header__sep {
+    width: 1px;
+    height: 14px;
+    background: var(--rule-strong);
+    display: none;
+  }
+
+  /* Secondary items are hidden on small screens; they remain reachable from the
+     footer, which needs no JavaScript and no hamburger. */
+  .header__item--wide { display: none; }
+
+  .header__link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    /* Widens the hit box for short labels such as "CV" without changing the type. */
+    padding-inline: var(--s2);
+    margin-inline: calc(var(--s2) * -1);
+    font-family: var(--font-mono);
+    font-size: var(--fs-small);
+    color: var(--text-muted);
+    text-decoration: none;
+    position: relative;
+    transition: color 200ms var(--ease);
+  }
+
+  .header__link::after {
+    content: '';
+    position: absolute;
+    left: var(--s2);
+    right: var(--s2);
+    bottom: 12px;
+    height: 1px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 220ms var(--ease);
+  }
+
+  .header__link:hover, .header__link:focus-visible { color: var(--text); }
+  .header__link:hover::after, .header__link:focus-visible::after { transform: scaleX(1); }
+
+  .header__link--cv { color: var(--text); }
+
+  @media (min-width: 768px) {
+    .header__item--wide { display: block; }
+    .header__sep { display: block; }
+  }
+
+  @media (min-width: 1024px) {
+    .header__role { display: block; }
+  }
+</style>

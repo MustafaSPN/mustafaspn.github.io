@@ -1,0 +1,497 @@
+---
+import CaseStudyLayout from '../../layouts/CaseStudyLayout.astro';
+import CaseSection from '../../components/CaseSection.astro';
+import ExternalLink from '../../components/ExternalLink.astro';
+import { getProject } from '../../data/projects';
+
+const project = getProject('stm32-udp');
+
+const stack = [
+  { group: 'Firmware', items: ['C', 'STM32H723ZG', 'FreeRTOS', 'lwIP', 'STM32CubeMX', 'CMake'] },
+  { group: 'Host', items: ['C++', 'ROS 2 Humble', 'Python measurement tools', 'Ubuntu 24.04'] },
+  { group: 'Link', items: ['Ethernet 100 Mbit', 'UDP', 'CRC16-CCITT', 'RMII / LAN8742 PHY'] },
+  { group: 'Tooling', items: ['OpenOCD', 'ST-LINK V3E', 'FreeRTOS stack checks', 'LWIP_STATS'] },
+];
+
+/** Endurance run: 1 kHz echo, ten minutes. Figures from docs/measurements.md. */
+const rtt = [
+  ['min', '299.1 µs'],
+  ['p50', '369.6 µs'],
+  ['p90', '387.2 µs'],
+  ['p99', '429.4 µs'],
+  ['max', '1784.6 µs'],
+  ['mean', '374.6 µs'],
+  ['jitter (std)', '16.1 µs'],
+];
+
+const protocol = [
+  ['CMD', '32 B', 'host → MCU', 'vx, vy, wz, flags, seq, timestamp'],
+  ['STATE', '92 B', 'MCU → host', 'wheel vel/pos, odom, measured twist, status bits'],
+  ['ECHO', '66 B', 'round trip', 'transport latency probe'],
+];
+---
+
+<CaseStudyLayout
+  project={project}
+  extraMeta={[
+    { term: 'Link', value: '100 Mbit switched Ethernet, UDP' },
+    { term: 'Measured', value: '1 kHz echo, ten minutes' },
+  ]}
+  stack={stack}
+>
+  <!-- ============ measurement panel in place of a hero image ============ -->
+  <section class="panel reveal" aria-labelledby="measured">
+    <div class="section-rule">
+      <span class="section-rule__index" aria-hidden="true">§</span>
+      <h2 class="section-rule__label" id="measured">Measured on hardware</h2>
+    </div>
+
+    <ul class="readout">
+      <li class="readout__item">
+        <span class="readout__value">300<span class="readout__unit">µs</span></span>
+        <span class="readout__label">Round trip, host to MCU and back</span>
+      </li>
+      <li class="readout__item">
+        <span class="readout__value">0</span>
+        <span class="readout__label">Packets lost in 600,000 at 1 kHz</span>
+      </li>
+      <li class="readout__item">
+        <span class="readout__value">28<span class="readout__unit">µs</span></span>
+        <span class="readout__label">MCU receive to transmit, ±1 µs</span>
+      </li>
+      <li class="readout__item">
+        <span class="readout__value">0.4<span class="readout__unit">%</span></span>
+        <span class="readout__label">MCU CPU at 150 packets/s each way</span>
+      </li>
+    </ul>
+
+    <p class="panel__source mono">
+      NUCLEO-H723ZG ↔ Raspberry Pi (Ubuntu 24.04, ROS 2 Humble) over a 100 Mbit switch.
+      Ten-minute endurance run at 1 kHz.
+    </p>
+  </section>
+
+  <CaseSection label="The problem" aside="Where the control loop should live">
+    <p class="lead">
+      A general-purpose Linux scheduler is a poor place to close a motion-control loop. It is
+      an excellent place to plan one.
+    </p>
+    <p>
+      The intended division of work is that the host sends intent only, and the control loop
+      lives on the microcontroller, where timing does not depend on a general-purpose
+      scheduler. That only works if the link between them is fast enough and predictable
+      enough that it is not itself the problem — which means it has to be measured, not
+      assumed.
+    </p>
+    <p>
+      This project builds that link between a Linux host running ROS 2 and an STM32H723 over
+      100 Mbit Ethernet, and characterises it: latency distribution, jitter, loss, and how
+      much of the round trip is the microcontroller versus everything else.
+    </p>
+  </CaseSection>
+
+  <CaseSection label="The system" aside="Two messages, fixed rate" wide>
+    <div class="measure prose">
+      <p>
+        The host publishes velocity commands; the microcontroller applies them, enforces a
+        failsafe, and reports state back. Two messages at a fixed rate, so a bridge node on the
+        host only has to translate between ROS topics and UDP packets.
+      </p>
+    </div>
+
+    <div class="diagram" role="img" aria-label="The Linux host running ROS 2 sends CMD packets at 100 Hz to UDP port 5000 on an STM32H723 running FreeRTOS at 520 MHz; the microcontroller returns STATE packets at 100 Hz to UDP port 5001. The host runs a bridge node mapping /cmd_vel to CMD and STATE to /odom; the microcontroller runs an above-normal-priority receive task, a fixed 100 Hz transmit task, and a low-priority diagnostics task.">
+      <div class="diagram__node">
+        <p class="diagram__title">Linux host</p>
+        <p class="diagram__sub mono">ROS 2</p>
+        <ul class="diagram__list mono">
+          <li>bridge node</li>
+          <li>/cmd_vel → CMD</li>
+          <li>STATE → /odom</li>
+        </ul>
+      </div>
+
+      <div class="diagram__link">
+        <p class="diagram__flow mono"><span class="diagram__dir">→</span> CMD · 100 Hz · UDP :5000</p>
+        <p class="diagram__flow mono"><span class="diagram__dir">←</span> STATE · 100 Hz · UDP :5001</p>
+      </div>
+
+      <div class="diagram__node">
+        <p class="diagram__title">STM32H723ZG</p>
+        <p class="diagram__sub mono">520 MHz · FreeRTOS</p>
+        <ul class="diagram__list mono">
+          <li>link_rx (AboveNormal)</li>
+          <li>link_tx (100 Hz, fixed)</li>
+          <li>diag (Low)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="measure prose diagram__note">
+      <p>
+        Kinematics and closed-loop control are not written yet. So far the failsafe is the part
+        that runs on the microcontroller.
+      </p>
+    </div>
+  </CaseSection>
+
+  <CaseSection label="Protocol" aside="One header, three packet types" wide>
+    <div class="measure prose">
+      <p>
+        <code>common/robot_link.h</code> is the single definition. The firmware and the ROS 2
+        node include the same file, and the Python tools mirror it with a layout verified byte
+        for byte against the C side.
+      </p>
+    </div>
+
+    <div class="table-wrap protocol">
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th scope="col">Type</th>
+            <th scope="col">Size</th>
+            <th scope="col">Direction</th>
+            <th scope="col">Contents</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            protocol.map(([type, size, dir, contents]) => (
+              <tr>
+                <th scope="row">{type}</th>
+                <td class="num">{size}</td>
+                <td>{dir}</td>
+                <td>{contents}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="measure prose diagram__note">
+      <p>
+        Struct sizes are checked at compile time, so adding a field on one side without the
+        other fails the build rather than misinterpreting a velocity command later. Every
+        packet carries a CRC16-CCITT.
+      </p>
+      <p>
+        The command rate is decoupled from whatever publishes into the bridge. If a planner
+        publishes irregularly or at 15 Hz, the bridge still feeds the microcontroller at a
+        steady 100 Hz by holding the last value — so the timeout on the MCU measures real
+        command freshness rather than planner jitter.
+      </p>
+    </div>
+  </CaseSection>
+
+  <CaseSection label="Safety behaviour" aside="Failsafe, sequence and reordering">
+    <ul class="bullets">
+      <li>
+        No valid command for 150 ms and the velocities ramp to zero at 5 m/s² and 10 rad/s²,
+        with a <code>CMD_TIMEOUT</code> status bit and a red LED. Ramping rather than cutting,
+        to avoid mechanical shock and wheel slip at speed.
+      </li>
+      <li>
+        A host restart resets its sequence counter, which must not lock the robot out.
+      </li>
+      <li>
+        UDP can reorder packets. A small backward step in <code>seq</code> is treated as a
+        reordered duplicate and dropped; a large one is treated as a new session.
+      </li>
+      <li>
+        <code>SEQ_GAP</code> and <code>CRC_ERROR</code> reflect the last second rather than a
+        cumulative count, so they can clear once a problem goes away.
+      </li>
+    </ul>
+  </CaseSection>
+
+  <CaseSection label="Results" aside="1 kHz echo, ten minutes" wide>
+    <div class="results">
+      <div class="results__col">
+        <h3 class="results__title label">Endurance — round-trip time</h3>
+        <div class="table-wrap">
+          <table class="spec-table">
+            <tbody>
+              {
+                rtt.map(([k, v]) => (
+                  <tr>
+                    <th scope="row">{k}</th>
+                    <td class="num">{v}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="mono results__note">
+          sent 600000 · received 600000 · loss 0 (0.000%) · out-of-order 0
+        </p>
+      </div>
+
+      <div class="results__col">
+        <h3 class="results__title label">Latency budget — 300 µs round trip</h3>
+
+        <div class="budget" role="img" aria-label="Of the 300 microsecond round trip, 28 microseconds is the microcontroller from receive to transmit, and 272 microseconds is the host network stack and the switch.">
+          <div class="budget__bar">
+            <span class="budget__seg budget__seg--mcu" style="flex: 28"></span>
+            <span class="budget__seg budget__seg--host" style="flex: 272"></span>
+          </div>
+          <ul class="budget__key mono">
+            <li><span class="budget__swatch budget__swatch--mcu" aria-hidden="true"></span>28 µs — MCU, receive → transmit, ±1 µs</li>
+            <li><span class="budget__swatch budget__swatch--host" aria-hidden="true"></span>272 µs — host network stack and switch</li>
+          </ul>
+        </div>
+
+        <div class="prose results__prose">
+          <p>
+            In a 100 Hz control loop the link takes under 4% of the period. Both directions run
+            at full rate with zero drops, and the microcontroller sustains it at roughly 0.4%
+            CPU.
+          </p>
+          <p>
+            Moving the host node from Python to C++ reduced p50 from 371 µs to 300 µs and p99
+            from 429 µs to 370 µs on the same hardware — worth knowing before considering
+            faster host hardware.
+          </p>
+          <p class="note">
+            <code>max = 1784.6 µs</code> is a single tail event in 600,000. MCU internal
+            processing stayed flat at 28 µs through it, so the source is host-side, not the
+            STM32.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p class="measure results__method">
+      <ExternalLink href="https://github.com/MustafaSPN/stm32h7-ros2-udp-link/blob/main/docs/measurements.md">
+        Measurement methodology
+      </ExternalLink>
+      — transport round-trip time and command-to-telemetry latency are reported separately,
+      because telemetry is emitted on a fixed 100 Hz timer and conflating the two makes a
+      healthy link look far worse than it is.
+    </p>
+  </CaseSection>
+
+  <CaseSection label="Notes from bring-up" aside="Four failures with no error message">
+    <p>
+      Six issues are written up in the repository with the symptom and how each was diagnosed.
+      Four are worth repeating, because none of them produced a compiler warning, an error
+      return, or a change in any lwIP counter:
+    </p>
+    <ul class="bullets">
+      <li>
+        CubeMX's CMake generator does not emit the D2 SRAM linker sections, so the Ethernet DMA
+        descriptors ended up in DTCM — memory the DMA cannot access. The build succeeded and
+        the PHY link came up, but no frame was ever transferred.
+      </li>
+      <li>
+        The RX thread's default stack is 350 bytes, which is <em>in bytes</em> under CMSIS-RTOS
+        v2. It overflowed during startup and lwIP saw nothing.
+      </li>
+      <li>
+        <code>SO_RCVTIMEO</code> expects a <code>struct timeval</code>. Passing an
+        <code>int</code> makes <code>setsockopt</code> return −1 without any other effect, and
+        <code>recvfrom</code> then blocks indefinitely.
+      </li>
+      <li>
+        <code>lwip_sendto()</code> references the caller's buffer rather than copying it. A
+        buffer in <code>.bss</code> caused a fatal bus error in the TX DMA, which stopped the
+        whole channel including receive.
+      </li>
+    </ul>
+    <p>
+      Three of these were traceable mainly because <code>configCHECK_FOR_STACK_OVERFLOW</code>,
+      <code>LWIP_STATS</code> and direct reads of the ETH DMA status register were enabled from
+      the beginning.
+    </p>
+  </CaseSection>
+
+  <CaseSection label="Status" aside="What runs, and what does not yet">
+    <div class="table-wrap">
+      <table class="spec-table">
+        <tbody>
+          <tr><th scope="row">Ethernet bring-up, latency characterisation</th><td>Done</td></tr>
+          <tr><th scope="row">Protocol, failsafe, 100 Hz telemetry</th><td>Done</td></tr>
+          <tr><th scope="row">ROS 2 measurement node</th><td>Done</td></tr>
+          <tr><th scope="row">ROS 2 bridge into a Nav2 stack</th><td>In progress</td></tr>
+          <tr><th scope="row">Kinematics and motor driver</th><td>Not started</td></tr>
+          <tr><th scope="row">Encoders, odometry, closed loop</th><td>Not started</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note note--block">
+      Motors are not driven yet. <code>/odom</code> carries zeros until the encoder work is
+      done; no odometry is estimated from commands, since that would look like real data
+      without being it.
+    </p>
+  </CaseSection>
+</CaseStudyLayout>
+
+<style>
+  /* ---------- measurement panel ---------- */
+
+  .panel { padding-bottom: var(--s4); }
+
+  .readout {
+    display: grid;
+    gap: var(--s7);
+    padding-block: clamp(24px, 4vw, 48px);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .readout__item { display: grid; gap: var(--s3); }
+
+  .readout__value {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(2.5rem, 7vw, 4.5rem);
+    letter-spacing: -0.045em;
+    line-height: 0.9;
+    color: var(--accent);
+    display: flex;
+    align-items: baseline;
+    gap: 0.1em;
+  }
+
+  .readout__unit {
+    font-family: var(--font-mono);
+    font-size: 0.26em;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
+  .readout__label {
+    font-family: var(--font-mono);
+    font-size: var(--fs-label);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: 24ch;
+  }
+
+  .panel__source { margin-top: var(--s4); max-width: 60ch; line-height: 1.6; }
+
+  @media (min-width: 640px) {
+    .readout { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s7) var(--s6); }
+  }
+
+  @media (min-width: 1100px) {
+    .readout { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s5); }
+  }
+
+  /* ---------- link diagram ---------- */
+
+  .diagram {
+    display: grid;
+    gap: 0;
+    margin-top: var(--s7);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--bg-raised);
+  }
+
+  .diagram__node { padding: var(--s5); }
+
+  .diagram__title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--fs-h3);
+    letter-spacing: -0.01em;
+  }
+
+  .diagram__sub { margin-top: var(--s1); color: var(--accent); }
+
+  .diagram__list { margin-top: var(--s4); display: grid; gap: var(--s1); color: var(--text-muted); }
+
+  .diagram__link {
+    padding: var(--s5);
+    display: grid;
+    gap: var(--s3);
+    align-content: center;
+    border-block: 1px solid var(--rule);
+  }
+
+  .diagram__flow { color: var(--text-secondary); white-space: nowrap; }
+  .diagram__dir { color: var(--accent); margin-right: var(--s2); }
+
+  .diagram__note { margin-top: var(--s5); }
+
+  @media (min-width: 900px) {
+    .diagram { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr); }
+    .diagram__link { border-block: 0; border-inline: 1px solid var(--rule); }
+  }
+
+  .protocol { margin-top: var(--s6); }
+
+  /* ---------- results ---------- */
+
+  .results { display: grid; gap: clamp(40px, 6vw, 72px); }
+  .results__col { display: grid; gap: var(--s4); align-content: start; }
+  .results__title { display: block; color: var(--text-muted); }
+  .results__note { line-height: 1.6; }
+  .results__prose { margin-top: var(--s3); }
+  .results__method { margin-top: clamp(32px, 4vw, 56px); color: var(--text-secondary); }
+
+  @media (min-width: 1024px) {
+    .results { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: clamp(32px, 4vw, 72px); }
+  }
+
+  /* ---------- latency budget bar ---------- */
+
+  .budget { display: grid; gap: var(--s4); }
+
+  .budget__bar {
+    display: flex;
+    height: 28px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .budget__seg--mcu { background: var(--accent); }
+  .budget__seg--host { background: var(--rule-strong); }
+
+  .budget__key { display: grid; gap: var(--s2); color: var(--text-muted); line-height: 1.6; }
+
+  .budget__key li { display: flex; align-items: baseline; gap: var(--s3); }
+
+  .budget__swatch {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 1px;
+    transform: translateY(1px);
+  }
+
+  .budget__swatch--mcu { background: var(--accent); }
+  .budget__swatch--host { background: var(--rule-strong); }
+
+  /* ---------- shared ---------- */
+
+  .bullets { display: grid; gap: var(--s3); }
+
+  .bullets li {
+    position: relative;
+    padding-left: var(--s5);
+    color: var(--text-secondary);
+  }
+
+  .bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 8px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .note {
+    border-left: 1px solid var(--accent);
+    padding-left: var(--s5);
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+  }
+
+  .note--block { margin-top: var(--s5); }
+</style>

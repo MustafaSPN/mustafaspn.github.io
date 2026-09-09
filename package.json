@@ -1,0 +1,27 @@
+{
+  "name": "mustafa-sepen-portfolio",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal portfolio \u2014 Mustafa Sepen, Robotics Software Engineer",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && node scripts/prune-assets.mjs dist",
+    "preview": "astro preview",
+    "check": "astro check",
+    "verify": "node scripts/verify.mjs dist",
+    "shoot": "node scripts/shoot.mjs http://localhost:4330 ./shots"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.6.0",
+    "@fontsource-variable/archivo": "^5.2.6",
+    "@fontsource/ibm-plex-mono": "^5.2.6",
+    "@fontsource/ibm-plex-sans": "^5.2.6",
+    "astro": "^5.14.1",
+    "sharp": "^0.34.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "typescript": "^5.9.2"
+  }
+}

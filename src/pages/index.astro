@@ -1,0 +1,533 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionRule from '../components/SectionRule.astro';
+import ProjectRecord from '../components/ProjectRecord.astro';
+import { site } from '../data/site';
+import { publishedProjects } from '../data/projects';
+import { withBase } from '../lib/paths';
+
+const flagship = publishedProjects.filter((p) => p.tier === 'flagship');
+const secondary = publishedProjects.filter((p) => p.tier === 'secondary');
+
+const stm32Metrics = [
+  { value: '300', unit: 'µs', label: 'Round-trip, host to MCU and back' },
+  { value: '0', label: 'Packets lost in 600,000 at 1 kHz' },
+  { value: '28', unit: 'µs', label: 'MCU receive to transmit, ±1 µs' },
+];
+
+const experience = [
+  {
+    role: 'Robotics Engineer',
+    org: 'Swegeo',
+    period: 'Sep 2025 — Present',
+    scope:
+      'Autonomous ground vehicles built from the electronic architecture up: ESP32 drive ' +
+      'control under a Raspberry Pi 5 running ROS 2 Humble, and a custom ROS 2 driver for a ' +
+      'dual-antenna RTK GNSS receiver with an integrated NTRIP client.',
+    scope2:
+      'Outdoor waypoint navigation with Nav2 over EKF sensor fusion, plus the browser-based ' +
+      'mission console used to plan and supervise runs in the field.',
+  },
+  {
+    role: 'Simulation Systems — R&D',
+    org: 'Baykar',
+    period: 'Feb 2025 — Jun 2025',
+    scope:
+      'Moving-object detection for UAV footage, from OpenCV baselines to hardware-accelerated ' +
+      'real-time processing with CUDA.',
+    scope2:
+      'Integrated YOLOv11 for complex scenes and ran an R&D comparison of the approaches on ' +
+      'performance and accuracy.',
+  },
+  {
+    role: 'Autonomous Systems — Software Team',
+    org: 'Team Navi · Njord Challenge, NTNU',
+    period: 'Aug 2025',
+    scope:
+      'ROS 2 autonomy for an unmanned surface vessel: obstacle mapping, mission state machines, ' +
+      'and dock approach and exit logic.',
+    scope2: '4th place among 11 international teams, Trondheim.',
+  },
+  {
+    role: 'Autonomous Systems — Software',
+    org: 'Teknofest Unmanned Surface Vehicle Competition',
+    period: 'Oct 2024',
+    scope:
+      'Perception with a ZED camera and YOLO, A* route planning and Pure Pursuit path tracking ' +
+      'across the autonomous vehicle stack.',
+    scope2: 'Finalist. Most Original Software Award.',
+  },
+  {
+    role: 'B.Sc. Computer Engineering',
+    org: 'Bahçeşehir University',
+    period: '2020 — 2025',
+    scope: 'Full scholarship. Honour degree, GPA 3.15 / 4.00.',
+    scope2: '',
+  },
+];
+
+const focus = [
+  {
+    domain: 'Autonomy',
+    items: [
+      'ROS 2 Humble',
+      'Nav2',
+      'Waypoint navigation',
+      'Regulated Pure Pursuit',
+      'Behaviour trees',
+      'Command arbitration',
+    ],
+  },
+  {
+    domain: 'Localization',
+    items: [
+      'RTK GNSS',
+      'Dual-antenna heading',
+      'NTRIP corrections',
+      'robot_localization',
+      'Dual EKF',
+      'TF frame topology',
+    ],
+  },
+  {
+    domain: 'Embedded',
+    items: [
+      'ESP32-S3',
+      'STM32H7',
+      'micro-ROS',
+      'FreeRTOS',
+      'Ethernet / UDP',
+      'Motor control and odometry',
+    ],
+  },
+  {
+    domain: 'Perception',
+    items: [
+      'OpenCV',
+      'YOLO11',
+      'ZED stereo depth',
+      'CUDA',
+      'LiDAR integration',
+      'Optical flow',
+    ],
+  },
+];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: site.name,
+  jobTitle: site.role,
+  email: `mailto:${site.email}`,
+  url: Astro.site ? new URL(withBase('/'), Astro.site).href : undefined,
+  address: { '@type': 'PostalAddress', addressLocality: 'Istanbul', addressCountry: 'TR' },
+  sameAs: [site.github, site.linkedin].filter(Boolean),
+  knowsAbout: [
+    'Robotics',
+    'ROS 2',
+    'Autonomous navigation',
+    'Nav2',
+    'GNSS RTK localization',
+    'Sensor fusion',
+    'Embedded systems',
+    'C++',
+    'Python',
+  ],
+  alumniOf: { '@type': 'CollegeOrUniversity', name: 'Bahçeşehir University' },
+};
+---
+
+<BaseLayout
+  title={site.title}
+  description={site.description}
+  path="/"
+  jsonLd={jsonLd}
+>
+  <!-- ========================= HERO ========================= -->
+  <section class="hero">
+    <div class="shell">
+      <p class="hero__eyebrow label">Robotics Software Engineer</p>
+
+      <h1 class="hero__name">Mustafa<br />Sepen</h1>
+
+      <ul class="hero__disciplines">
+        {site.disciplines.map((d) => <li>{d}</li>)}
+      </ul>
+
+      <div class="hero__lower">
+        <div class="hero__statement-col">
+          <p class="hero__statement">
+            Outdoor autonomy on real hardware — RTK GNSS localization, Nav2 waypoint
+            navigation and the embedded motor interface underneath, running today on three
+            ground vehicles that share one ROS 2 stack.
+          </p>
+        </div>
+
+        <dl class="hero__rail">
+          <div class="hero__rail-row">
+            <dt class="hero__rail-term">Currently</dt>
+            <dd class="hero__rail-value">Robotics Engineer, Swegeo</dd>
+          </div>
+          <div class="hero__rail-row">
+            <dt class="hero__rail-term">Platforms</dt>
+            <dd class="hero__rail-value">Tracked · 4×4 · Ackermann · USV</dd>
+          </div>
+          <div class="hero__rail-row">
+            <dt class="hero__rail-term">Primary stack</dt>
+            <dd class="hero__rail-value">ROS 2 Humble · C++ · Python</dd>
+          </div>
+          <div class="hero__rail-row">
+            <dt class="hero__rail-term">Based</dt>
+            <dd class="hero__rail-value">Istanbul, Türkiye</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="hero__actions">
+        <a class="button button--primary" href={withBase('/#work')}>
+          View selected work
+        </a>
+
+        <div class="hero__links">
+          <a
+            class="link hero__link"
+            href={site.github}
+            rel="me noopener noreferrer"
+            target="_blank">GitHub<span class="arrow" aria-hidden="true">↗</span></a
+          >
+          {
+            site.linkedin && (
+              <a
+                class="link hero__link"
+                href={site.linkedin}
+                rel="me noopener noreferrer"
+                target="_blank">
+                LinkedIn<span class="arrow" aria-hidden="true">↗</span>
+              </a>
+            )
+          }
+          <a class="link hero__link" href={withBase(site.cv)}>CV</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= WORK ========================= -->
+  <section class="section" id="work">
+    <div class="shell">
+      <SectionRule index="01" label="Selected work" />
+
+      <div class="work">
+        {
+          flagship.map((project) => (
+            <ProjectRecord
+              project={project}
+              metrics={project.slug === 'stm32-udp' ? stm32Metrics : []}
+            />
+          ))
+        }
+      </div>
+
+      <div class="work-secondary">
+        {secondary.map((project) => <ProjectRecord project={project} />)}
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== EXPERIENCE ====================== -->
+  <section class="section" id="experience">
+    <div class="shell">
+      <SectionRule index="02" label="Experience" />
+
+      <ol class="experience">
+        {
+          experience.map((item) => (
+            <li class="experience__row reveal">
+              <p class="experience__period mono">{item.period}</p>
+              <div class="experience__detail">
+                <h3 class="experience__role h3">{item.role}</h3>
+                <p class="experience__org">{item.org}</p>
+                <p class="experience__scope">{item.scope}</p>
+                {item.scope2 && <p class="experience__scope">{item.scope2}</p>}
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- =================== ENGINEERING FOCUS =================== -->
+  <section class="section" id="focus">
+    <div class="shell">
+      <SectionRule index="03" label="Engineering focus" />
+
+      <div class="focus">
+        {
+          focus.map((group) => (
+            <section class="focus__group reveal">
+              <h3 class="focus__domain label">{group.domain}</h3>
+              <ul class="focus__items">
+                {group.items.map((item) => (
+                  <li>{item}</li>
+                ))}
+              </ul>
+            </section>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= ABOUT ========================= -->
+  <section class="section" id="about">
+    <div class="shell">
+      <SectionRule index="04" label="About" />
+
+      <div class="rail">
+        <p class="about__aside mono">
+          Istanbul, Türkiye<br />Available for robotics roles in Europe
+        </p>
+
+        <div class="about__body prose reveal">
+          <p class="lead">
+            I work at the boundary between robotics software and the vehicle itself —
+            localization and navigation on one side, embedded control and physical
+            integration on the other.
+          </p>
+          <p>
+            In practice that means writing the ROS 2 stack, writing the firmware it talks to,
+            wiring the GNSS receiver and the IMU, and then taking the vehicle outside to find
+            out what the configuration actually does. Most of what I know about EKF tuning,
+            frame conventions and command arbitration came from watching a real platform get
+            it wrong in a field.
+          </p>
+          <p>
+            The platforms so far are ground and marine: a tracked skid-steer UGV, a 4×4
+            differential rover and an Ackermann RC crawler running one shared autonomy
+            architecture, and an unmanned surface vessel built with a team for the Njord
+            Challenge at NTNU. I write C++ and Python, and I am comfortable being the person
+            who owns the part where the software meets the hardware.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* ---------------- hero ---------------- */
+
+  .hero {
+    padding-top: clamp(56px, 11vw, 132px);
+    padding-bottom: clamp(48px, 8vw, 104px);
+  }
+
+  .hero__eyebrow { display: block; margin-bottom: var(--s6); }
+
+  .hero__name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--fs-hero);
+    letter-spacing: -0.045em;
+    line-height: 0.92;
+    margin-bottom: var(--s6);
+  }
+
+  .hero__disciplines {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s2) var(--s5);
+    row-gap: var(--s3);
+    padding-bottom: var(--s6);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .hero__disciplines li {
+    font-family: var(--font-mono);
+    font-size: var(--fs-small);
+    color: var(--text-muted);
+    position: relative;
+  }
+
+  /* The interpunct separators only make sense on a single line; below the wrap
+     breakpoint the items are spaced instead, so no separator dangles at a line end. */
+  .hero__disciplines li::after { content: none; }
+
+  @media (min-width: 900px) {
+    .hero__disciplines li:not(:last-child)::after {
+      content: '·';
+      position: absolute;
+      right: calc(var(--s5) / -2);
+      transform: translateX(-50%);
+      color: var(--rule-strong);
+    }
+  }
+
+  .hero__lower {
+    margin-top: var(--s6);
+    display: grid;
+    gap: var(--s7);
+  }
+
+  .hero__rail { display: grid; align-content: start; }
+
+  .hero__rail-row {
+    display: grid;
+    gap: var(--s1);
+    padding-block: var(--s3);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .hero__rail-row:first-child { border-top: 1px solid var(--rule); }
+
+  .hero__rail-term {
+    font-family: var(--font-mono);
+    font-size: var(--fs-label);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .hero__rail-value {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--fs-small);
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .hero__statement {
+    max-width: 54ch;
+    font-size: var(--fs-lead);
+    line-height: 1.55;
+    color: var(--text-secondary);
+    letter-spacing: -0.005em;
+  }
+
+  .hero__actions {
+    margin-top: var(--s7);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s5);
+  }
+
+  .hero__links { display: flex; flex-wrap: wrap; gap: var(--s6); }
+
+  .hero__link {
+    font-family: var(--font-mono);
+    font-size: var(--fs-small);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    /* "CV" is a two-character label; padding keeps its hit box above 24px wide. */
+    padding-inline: var(--s2);
+    margin-inline: calc(var(--s2) * -1);
+  }
+
+  @media (min-width: 700px) {
+    .hero__actions { flex-direction: row; align-items: center; gap: var(--s8); }
+  }
+
+  @media (min-width: 1024px) {
+    .hero__lower {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+      column-gap: clamp(40px, 6vw, 112px);
+      align-items: start;
+    }
+  }
+
+  @media (max-width: 699px) {
+    .hero__actions .button { width: 100%; justify-content: center; }
+  }
+
+  /* ---------------- work ---------------- */
+
+  .work { display: grid; gap: clamp(72px, 10vw, 160px); }
+
+  .work-secondary {
+    display: grid;
+    gap: clamp(56px, 8vw, 96px);
+    margin-top: clamp(72px, 10vw, 160px);
+  }
+
+  @media (min-width: 1024px) {
+    .work-secondary {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: clamp(32px, 4vw, 72px);
+      align-items: start;
+    }
+  }
+
+  /* ---------------- experience ---------------- */
+
+  .experience { display: grid; }
+
+  .experience__row {
+    display: grid;
+    gap: var(--s3);
+    padding-block: var(--s6);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .experience__row:first-child { padding-top: 0; }
+
+  .experience__period { color: var(--text-muted); white-space: nowrap; }
+
+  .experience__org {
+    margin-top: var(--s1);
+    font-family: var(--font-mono);
+    font-size: var(--fs-small);
+    color: var(--accent);
+  }
+
+  .experience__scope {
+    margin-top: var(--s4);
+    color: var(--text-secondary);
+    max-width: 62ch;
+  }
+
+  .experience__scope + .experience__scope { margin-top: var(--s3); }
+
+  @media (min-width: 900px) {
+    .experience__row {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 9fr);
+      gap: clamp(32px, 4vw, 72px);
+    }
+    .experience__period { padding-top: 0.4em; }
+  }
+
+  /* ---------------- focus ---------------- */
+
+  .focus { display: grid; gap: var(--s7); }
+
+  .focus__group {
+    padding-top: var(--s4);
+    border-top: 1px solid var(--rule);
+  }
+
+  .focus__domain { display: block; color: var(--accent); margin-bottom: var(--s4); }
+
+  .focus__items { display: grid; gap: var(--s2); }
+
+  .focus__items li {
+    color: var(--text-secondary);
+    font-size: var(--fs-small);
+    line-height: 1.5;
+  }
+
+  @media (min-width: 560px) {
+    .focus { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s7) var(--s6); }
+  }
+
+  @media (min-width: 1024px) {
+    .focus { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(24px, 3vw, 48px); }
+  }
+
+  /* ---------------- about ---------------- */
+
+  .about__aside { color: var(--text-muted); line-height: 1.7; }
+  .about__body { max-width: var(--measure); }
+</style>

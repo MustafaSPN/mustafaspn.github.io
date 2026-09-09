@@ -1,0 +1,23 @@
+---
+interface Props {
+  rows: { term: string; value: string }[];
+  sticky?: boolean;
+}
+
+const { rows, sticky = false } = Astro.props;
+---
+
+<dl class:list={['meta-rail', sticky && 'meta-rail--sticky']}>
+  {
+    rows.map((row) => (
+      <div class="meta-rail__row">
+        <dt class="meta-rail__term">{row.term}</dt>
+        <dd class="meta-rail__value">{row.value}</dd>
+      </div>
+    ))
+  }
+</dl>
+
+<style>
+  dd { margin: 0; }
+</style>

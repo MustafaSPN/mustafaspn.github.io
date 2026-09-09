@@ -1,0 +1,263 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import MetaRail from '../components/MetaRail.astro';
+import Figure from '../components/Figure.astro';
+import type { Project } from '../data/projects';
+import { publishedProjects, projectNumber } from '../data/projects';
+import { site } from '../data/site';
+import { pageUrl, withBase } from '../lib/paths';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  project: Project;
+  /** Extra rows appended to the metadata rail. */
+  extraMeta?: { term: string; value: string }[];
+  /** Omit to let the page supply its own opening block instead of a media hero. */
+  hero?: {
+    image?: ImageMetadata;
+    alt: string;
+    video?: { src: string; poster: string; width: number; height: number };
+    caption?: string;
+    contain?: boolean;
+    ratio?: string;
+  };
+  /** Full technology list for the page footer. */
+  stack: { group: string; items: string[] }[];
+}
+
+const { project, extraMeta = [], hero, stack } = Astro.props;
+
+const n = projectNumber(project.slug);
+
+const meta = [
+  { term: 'Role', value: project.role },
+  { term: 'Year', value: project.year },
+  { term: 'Platform', value: project.platform },
+  ...extraMeta,
+];
+
+const index = publishedProjects.findIndex((p) => p.slug === project.slug);
+const next = publishedProjects[(index + 1) % publishedProjects.length];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CreativeWork',
+  name: project.title,
+  headline: `${project.title} — ${project.subtitle}`,
+  description: project.seoDescription,
+  author: { '@type': 'Person', name: site.name },
+  dateCreated: project.year,
+  ...(project.repo ? { codeRepository: project.repo } : {}),
+  keywords: project.tech.join(', '),
+};
+---
+
+<BaseLayout
+  title={`${project.title} — ${site.name}`}
+  description={project.seoDescription}
+  path={`/projects/${project.slug}`}
+  jsonLd={jsonLd}
+>
+  <article class="case">
+    <!-- ------------------- header ------------------- -->
+    <header class="case__header">
+      <div class="shell">
+        <nav class="case__back" aria-label="Breadcrumb">
+          <a class="link case__back-link" href={withBase('/#work')}>
+            <span aria-hidden="true">←</span> Selected work
+          </a>
+        </nav>
+
+        <p class="case__number label">Project {n}</p>
+        <h1 class="case__title">{project.title}</h1>
+        <p class="case__subtitle">{project.subtitle}</p>
+
+        <div class="case__meta">
+          <MetaRail rows={meta} />
+        </div>
+      </div>
+    </header>
+
+    <!-- ------------------- hero media ------------------- -->
+    {
+      hero && (
+        <div class="case__hero shell">
+          <Figure
+            image={hero.image}
+            alt={hero.alt}
+            video={hero.video}
+            caption={hero.caption}
+            contain={hero.contain}
+            ratio={hero.ratio}
+            loading="eager"
+            sizes="(min-width: 1440px) 1400px, 100vw"
+          />
+        </div>
+      )
+    }
+
+    <!-- ------------------- body ------------------- -->
+    <div class="case__body shell">
+      <slot />
+    </div>
+
+    <!-- ------------------- stack + source ------------------- -->
+    <section class="case__section shell" aria-labelledby="tech-stack">
+      <div class="section-rule">
+        <span class="section-rule__index" aria-hidden="true">§</span>
+        <h2 class="section-rule__label" id="tech-stack">Tech stack</h2>
+      </div>
+
+      <div class="stack">
+        {
+          stack.map((group) => (
+            <div class="stack__group">
+              <h3 class="stack__name label">{group.group}</h3>
+              <ul class="stack__items">
+                {group.items.map((item) => (
+                  <li>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </div>
+
+      {
+        project.repo && (
+          <div class="case__source">
+            <a
+              class="button"
+              href={project.repo}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View on GitHub<span class="arrow" aria-hidden="true">↗</span>
+            </a>
+          </div>
+        )
+      }
+    </section>
+
+    <!-- ------------------- next ------------------- -->
+    <nav class="case__next" aria-label="Next project">
+      <a class="case__next-link shell" href={pageUrl(`/projects/${next.slug}`)}>
+        <span class="label case__next-label">Next — project {projectNumber(next.slug)}</span>
+        <span class="case__next-title">{next.title}</span>
+      </a>
+    </nav>
+  </article>
+</BaseLayout>
+
+<style>
+  .case__header { padding-top: clamp(40px, 6vw, 80px); }
+
+  .case__back { margin-bottom: clamp(40px, 6vw, 72px); }
+
+  .case__back-link {
+    font-family: var(--font-mono);
+    font-size: var(--fs-small);
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s2);
+    min-height: 44px;
+  }
+
+  .case__number { display: block; color: var(--accent); margin-bottom: var(--s4); }
+
+  .case__title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--fs-display);
+    letter-spacing: -0.035em;
+    line-height: 1;
+  }
+
+  .case__subtitle {
+    margin-top: var(--s4);
+    font-size: var(--fs-lead);
+    color: var(--text-secondary);
+    max-width: 46ch;
+    line-height: 1.5;
+  }
+
+  .case__meta { margin-top: clamp(32px, 5vw, 56px); }
+
+  .case__hero { margin-top: clamp(40px, 6vw, 72px); }
+
+  .case__body { padding-top: clamp(56px, 8vw, 112px); }
+
+  .case__section { padding-top: clamp(56px, 8vw, 112px); }
+
+  .stack {
+    display: grid;
+    gap: var(--s6);
+  }
+
+  .stack__group {
+    padding-top: var(--s4);
+    border-top: 1px solid var(--rule);
+  }
+
+  .stack__name { display: block; color: var(--text-muted); margin-bottom: var(--s3); }
+
+  .stack__items { display: grid; gap: var(--s2); }
+
+  .stack__items li {
+    font-size: var(--fs-small);
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .case__source { margin-top: clamp(40px, 5vw, 64px); }
+
+  .case__next { margin-top: clamp(72px, 10vw, 144px); border-top: 1px solid var(--rule); }
+
+  .case__next-link {
+    display: block;
+    padding-block: clamp(40px, 6vw, 80px);
+    text-decoration: none;
+  }
+
+  .case__next-label { display: block; color: var(--text-muted); margin-bottom: var(--s3); }
+
+  .case__next-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.75rem, 5vw, 3rem);
+    letter-spacing: -0.03em;
+    line-height: 1;
+    position: relative;
+    display: inline-block;
+    padding-bottom: 4px;
+  }
+
+  .case__next-title::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 280ms var(--ease);
+  }
+
+  .case__next-link:hover .case__next-title::after,
+  .case__next-link:focus-visible .case__next-title::after { transform: scaleX(1); }
+
+  @media (min-width: 560px) {
+    .stack { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s6) var(--s5); }
+  }
+
+  @media (min-width: 1024px) {
+    .case__header .shell { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: clamp(32px, 4vw, 72px); }
+    .case__back { grid-column: 1 / -1; }
+    .case__number, .case__title, .case__subtitle { grid-column: 1; }
+    .case__meta { grid-column: 2; grid-row: 2 / span 3; align-self: end; margin-top: 0; }
+    .stack { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+</style>

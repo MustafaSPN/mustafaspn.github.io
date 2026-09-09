@@ -1,0 +1,35 @@
+---
+interface Props {
+  label: string;
+  id?: string;
+  /** Optional short line in the left rail beside the prose. */
+  aside?: string;
+  /** Let the content span the full width instead of the prose measure. */
+  wide?: boolean;
+}
+
+const { label, id, aside, wide = false } = Astro.props;
+const headingId = id ?? label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+---
+
+<section class="case-section reveal" aria-labelledby={headingId}>
+  <div class="section-rule">
+    <span class="section-rule__index" aria-hidden="true">§</span>
+    <h2 class="section-rule__label" id={headingId}>{label}</h2>
+  </div>
+
+  <div class="rail">
+    <div class="case-section__aside">
+      {aside && <p class="mono">{aside}</p>}
+    </div>
+    <div class:list={['case-section__body', 'prose', !wide && 'measure']}>
+      <slot />
+    </div>
+  </div>
+</section>
+
+<style>
+  .case-section + :global(.case-section) { margin-top: clamp(56px, 8vw, 112px); }
+  .case-section__aside { color: var(--text-muted); }
+  .case-section__aside :global(p) { line-height: 1.7; }
+</style>

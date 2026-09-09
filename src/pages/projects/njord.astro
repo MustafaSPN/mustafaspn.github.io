@@ -1,0 +1,260 @@
+---
+import CaseStudyLayout from '../../layouts/CaseStudyLayout.astro';
+import CaseSection from '../../components/CaseSection.astro';
+import Figure from '../../components/Figure.astro';
+import ExternalLink from '../../components/ExternalLink.astro';
+import { getProject } from '../../data/projects';
+
+import architecture from '../../assets/media/njord-architecture.png';
+import vessel from '../../assets/media/njord-hero.jpg';
+
+const project = getProject('njord');
+
+const stack = [
+  { group: 'Autonomy', items: ['ROS 2', 'Nav2', 'NavFn A*', 'DWB controller', 'Theta*', 'Regulated Pure Pursuit'] },
+  { group: 'Perception', items: ['ZED stereo camera', 'YOLO (yolo_ros)', 'OpenCV depth-edge processing', 'Occupancy grid mapping'] },
+  { group: 'Vehicle', items: ['MAVROS', 'Autopilot velocity control', 'GPS waypoints', 'Mission state machines'] },
+  { group: 'Simulation', items: ['VRX / Gazebo', 'Njord task worlds', 'Buoy and dock geometry', 'Python'] },
+];
+---
+
+<CaseStudyLayout
+  project={project}
+  extraMeta={[
+    { term: 'Event', value: 'Njord Challenge 2025 · NTNU' },
+    { term: 'Result', value: '4th of 11 international teams' },
+    { term: 'Team', value: 'Team Navi, Türkiye' },
+  ]}
+  hero={{
+    image: vessel,
+    alt:
+      'Team Navi’s unmanned surface vessel afloat in Trondheim harbour: twin blue catamaran ' +
+      'hulls, a white instrument deck carrying the stereo camera housing and electronics ' +
+      'enclosure, and two GNSS antenna masts.',
+    caption:
+      'The vessel at Nyhavna, Trondheim — twin hulls, instrument deck, stereo camera and ' +
+      'dual GNSS masts.',
+  }}
+  stack={stack}
+>
+  <CaseSection label="The problem" aside="Nyhavna, Trondheim · August 2025">
+    <p class="lead">
+      The Njord Challenge asks a small unmanned surface vessel to complete a marked course,
+      avoid obstacles, and dock itself — outdoors, on water, against real buoys, with no
+      operator in the loop.
+    </p>
+    <p>
+      Team Navi built the software for that vessel: a ROS 2 stack running perception,
+      mapping, mission planning, navigation and docking. It placed 4th among 11 international
+      teams at NTNU in August 2025.
+    </p>
+    <p>
+      <ExternalLink href="https://www.njordchallenge.com/previous-competitions/2025-challenge" standalone>
+        Official competition results
+      </ExternalLink>
+    </p>
+  </CaseSection>
+
+  <CaseSection label="The system" aside="Perception → mapping → mission → navigation">
+    <p>
+      YOLO detections and ZED stereo depth become labelled obstacle and gate positions in a
+      map frame. Task state machines turn those into waypoints and Nav2 goals. Nav2 plans and
+      tracks, and a relay forwards the resulting velocity commands to MAVROS and the vehicle
+      autopilot.
+    </p>
+    <p>
+      The primary route consumes YOLO detections alongside registered ZED depth and camera
+      intrinsics. The median of the ten closest positive centre-row depths produces a labelled
+      map-frame point using the synchronised MAVROS odometry pose. Red and green detections
+      populate an occupancy grid and define gate midpoint waypoints. Classical OpenCV
+      depth-edge processing estimates dock geometry and the empty berth side for the docking
+      task.
+    </p>
+    <p>
+      A separate, earlier route implements custom A* planning with B-spline smoothing and a
+      lookahead heading tracker. It is not established as the final competition navigation
+      path, and it is documented as an alternative rather than the primary one.
+    </p>
+  </CaseSection>
+
+  <CaseSection label="Architecture" aside="Two navigation routes, kept apart" wide>
+    <Figure
+      image={architecture}
+      alt="Njord USV autonomy architecture. ZED RGB feeds YOLO detections which, with ZED depth and intrinsics, are projected into the map frame. Classical depth-edge dock detection feeds a PortInfo transform. Gate, cardinal and docking mission logic combines these with GPS waypoints and MAVROS odometry to issue Nav2 goals planned with NavFn A-star and DWB, relayed as velocity commands to MAVROS, alongside an earlier custom A-star and lookahead controller route."
+      contain
+      caption="The diagram separates the Nav2 mission route from the earlier custom controller. Diagram from the project repository."
+      sizes="(min-width: 1024px) 820px, 100vw"
+    />
+  </CaseSection>
+
+  <CaseSection label="Engineering work" aside="My contributions, as evidenced in the repository">
+    <p>
+      This was team software. Five people built and integrated the stack across perception,
+      mapping, mission logic, navigation, docking and simulation. The repository documents
+      individual contributions against source diffs rather than inferring them, and these are
+      the ones attributed to me:
+    </p>
+    <ul class="bullets">
+      <li>
+        Integrated a ROS A* planner with spline smoothing and a lookahead heading tracker —
+        an integration of established algorithms, not an invention of them.
+      </li>
+      <li>
+        Added spatial filtering for repeated mapped obstacles: distance-based rejection of
+        duplicate detections in the occupancy-grid node.
+      </li>
+      <li>
+        Extended the gate mission and waypoint integration — gate and GPS queue transitions,
+        and the subsequent task-map refactoring.
+      </li>
+      <li>
+        Developed cardinal-mark mission handling, including corrections to the north/south
+        direction mapping.
+      </li>
+      <li>
+        Developed the docking mission logic and dock-geometry interfaces — the
+        <code>PortInfo</code> message, port TF callbacks, and the task approach and exit state
+        logic, built on the team's existing depth detection.
+      </li>
+      <li>
+        Extended GPS-to-local-frame integration with MAVROS odometry subscription, readiness
+        handling and local offsets.
+      </li>
+      <li>
+        Added the Njord simulation geometry — real-scale buoy definitions and docking world
+        revisions in the VRX overlay.
+      </li>
+    </ul>
+  </CaseSection>
+
+  <CaseSection label="Key engineering challenge" aside="Turning detections into a map">
+    <p class="lead">
+      A bounding box is not an obstacle. It is a rectangle in an image, and the mission logic
+      needs a position on the water.
+    </p>
+    <p>
+      Bridging that gap is where most of the difficulty sits. A detection has to be paired with
+      the registered depth image, reduced to a single robust range — the median of the ten
+      closest positive centre-row depths, rather than a single pixel that might land on the sky
+      behind the buoy — and then projected through the camera intrinsics into a map-frame point
+      using the vessel's synchronised odometry pose at that instant.
+    </p>
+    <p>
+      Two things then have to hold. The pose used for projection must be the pose at the time
+      of the frame, not the latest one, or every obstacle is placed with a lag proportional to
+      boat speed. And the same buoy seen across many frames must resolve to one map entry, not
+      a smear of near-duplicates — which is what the distance-based spatial filter is for.
+    </p>
+    <p>
+      Docking works from the other direction. Rather than a learned detector, classical
+      depth-edge processing estimates the dock's structure and publishes three geometric
+      points plus an estimate of which berth is empty; the mission code builds a target pose
+      from those and advances through its navigation states.
+    </p>
+  </CaseSection>
+
+  <CaseSection label="Result and scope" aside="What the placing does and does not establish">
+    <p class="lead">
+      Team Navi placed 4th among 11 international teams at the Njord Challenge 2025 in
+      Trondheim.
+    </p>
+    <div class="scope">
+      <h3 class="scope__title label">Stated limitations</h3>
+      <ul class="bullets">
+        <li>This is a development implementation, not a production-ready stack.</li>
+        <li>
+          The public copy has passed static checks but has not been built or run — in ROS, in
+          simulation, or on a vehicle — during its preparation for release.
+        </li>
+        <li>
+          Known issues include unchecked Nav2 action statuses, coordinate and TF assumptions,
+          disabled grid bounds checks, and command arbitration gaps on dock exit.
+        </li>
+        <li>
+          The competition result <strong>does not</strong> establish that docking, obstacle
+          avoidance or any particular control mode ran successfully during the event.
+        </li>
+        <li>
+          The frameworks the project builds on — ROS 2, Nav2, MAVROS, the Stereolabs ZED
+          wrapper, YOLO and VRX — are external dependencies, not team work.
+        </li>
+      </ul>
+    </div>
+  </CaseSection>
+
+  <CaseSection label="Field testing" aside="Real vehicle, on the water" wide>
+    <div class="rail field">
+      <div class="field__media">
+        <Figure
+          video={{ src: '/media/njord-demo.mp4', poster: '/media/njord-demo-poster.jpg', width: 480, height: 480 }}
+          alt="The unmanned surface vessel under way on open water, passing a green channel buoy."
+          caption="Under way past a green channel buoy."
+          zoom
+        />
+      </div>
+      <div class="prose field__body">
+        <p>
+          The clip shows the real vehicle moving on the water. It does not by itself establish
+          which control mode was running, and it is not evidence that docking or obstacle
+          avoidance executed successfully — those remain unverified, as the repository states.
+        </p>
+        <p class="note">
+          Recorded at the competition site. The published copy is a silent, looping excerpt of
+          the original footage with no content edits.
+        </p>
+      </div>
+    </div>
+  </CaseSection>
+
+  <CaseSection label="Software team" aside="Credited as provided by the project">
+    <p>
+      Mustafa Sepen · Metehan Karaaslan · Semih Vicir · Ahad Aydın · Selim Hacıömeroğlu
+    </p>
+    <p>
+      All five worked on the software. Individual responsibilities are not inferred from commit
+      history beyond the contribution evidence recorded in the repository.
+    </p>
+  </CaseSection>
+</CaseStudyLayout>
+
+<style>
+  .field { align-items: start; }
+  .field__body { max-width: var(--measure); }
+
+  @media (min-width: 1024px) {
+    .field { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+  }
+
+  .note {
+    border-left: 1px solid var(--accent);
+    padding-left: var(--s5);
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+  }
+
+  .bullets { display: grid; gap: var(--s3); }
+
+  .bullets li {
+    position: relative;
+    padding-left: var(--s5);
+    color: var(--text-secondary);
+  }
+
+  .bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 8px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .scope {
+    margin-top: var(--s7);
+    padding-top: var(--s5);
+    border-top: 1px solid var(--rule);
+  }
+
+  .scope__title { display: block; color: var(--accent); margin-bottom: var(--s4); }
+</style>

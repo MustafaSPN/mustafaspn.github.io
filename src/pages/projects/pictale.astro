@@ -1,0 +1,206 @@
+---
+import CaseStudyLayout from '../../layouts/CaseStudyLayout.astro';
+import CaseSection from '../../components/CaseSection.astro';
+import Figure from '../../components/Figure.astro';
+import ExternalLink from '../../components/ExternalLink.astro';
+import { getProject } from '../../data/projects';
+
+import hero from '../../assets/media/pictale-hero.jpg';
+import architecture from '../../assets/media/pictale-architecture.png';
+import upload from '../../assets/media/pictale-upload.jpg';
+import story from '../../assets/media/pictale-story.jpg';
+import customize from '../../assets/media/pictale-customize.jpg';
+import library from '../../assets/media/pictale-library.jpg';
+
+const project = getProject('pictale');
+
+const stack = [
+  { group: 'Client', items: ['Flutter', 'Dart', 'Provider', 'iOS 18+'] },
+  { group: 'Backend', items: ['Firebase Cloud Functions', 'Node.js', 'Cloud Firestore', 'Cloud Storage'] },
+  { group: 'AI pipeline', items: ['Google Gemini (multimodal)', 'Neural TTS with word timings', 'Structured output parsing'] },
+  { group: 'Platform', items: ['Firebase Auth', 'App Check — App Attest', 'Adapty subscriptions', 'Firebase Analytics'] },
+];
+
+const shots = [
+  { image: upload, alt: 'Pictale’s upload screen, where a photographed drawing is cropped before generation.', caption: 'Upload a drawing' },
+  { image: story, alt: 'A generated, illustrated story page with the narrated text highlighted word by word.', caption: 'A drawing becomes a narrated story' },
+  { image: customize, alt: 'The story configuration screen, offering themes, a hero name, story length and narrator voices.', caption: 'Choose a theme and a narrator voice' },
+  { image: library, alt: 'The personal story library screen, listing saved stories with favourites and play counts.', caption: 'Library and favourites' },
+];
+---
+
+<CaseStudyLayout
+  project={project}
+  extraMeta={[
+    { term: 'Status', value: 'Published on the App Store' },
+    { term: 'Source', value: 'Private — showcase repository only' },
+  ]}
+  hero={{
+    image: hero,
+    alt: 'Pictale running on an iPhone, showing a child’s drawing turned into an illustrated, narrated story page.',
+    caption: 'Published App Store listing image, unmodified.',
+    contain: true,
+    ratio: '16 / 10',
+  }}
+  stack={stack}
+>
+  <CaseSection label="Why this is here" aside="Context">
+    <p class="lead">
+      This is not my professional direction. It is evidence that I can take a product from
+      nothing to a public release on my own — client, backend, pipeline, billing, store
+      submission — and keep maintaining it.
+    </p>
+    <p>
+      The robotics work on this site is where I want to spend my career. Pictale is the
+      demonstration that I can also own the parts of engineering that have nothing to do with
+      vehicles: asynchronous system design, idempotent transaction handling, third-party
+      integration, and shipping something people actually use.
+    </p>
+  </CaseSection>
+
+  <CaseSection label="The system" aside="Drawing → story → narration">
+    <p>
+      A child photographs a drawing and picks the shape of the story — a theme, a hero name, a
+      length, one of six narrator voices. The drawing is sent to a multimodal model, which reads
+      the picture and writes a story about what is actually in it, constrained to the child's
+      age. The story is narrated by a neural text-to-speech voice and returned as audio with
+      word-level timing data, which drives per-word highlighting synchronised to the playhead.
+    </p>
+    <p>
+      The pipeline is deliberately asynchronous. The client never holds a long-running request
+      open — it writes a record and listens for changes, and the backend advances that record
+      through generation, narration and completion. A multi-minute generation survives the app
+      being backgrounded.
+    </p>
+  </CaseSection>
+
+  <CaseSection label="Architecture" aside="Event-driven, serverless" wide>
+    <Figure
+      image={architecture}
+      alt="Pictale system architecture. The Flutter app writes a story record to Firestore, which triggers a chain of Cloud Functions for generation, narration and completion, calling Gemini and a neural TTS provider and persisting media to Cloud Storage, with subscription entitlements and App Check attestation on separate paths."
+      contain
+      caption="Story creation modelled as a state machine over a single record. Diagram from the project repository."
+      sizes="(min-width: 1024px) 880px, 100vw"
+    />
+  </CaseSection>
+
+  <CaseSection label="Engineering work" aside="Sole developer">
+    <p>
+      I designed, built, shipped and maintain the whole product. The parts that were actually
+      difficult:
+    </p>
+    <ul class="bullets">
+      <li>
+        <strong>Event-driven generation pipeline.</strong> Writing the record enqueues the work;
+        backend triggers advance it through generation, narration and completion; the client
+        subscribes to the same record for live progress. No long-lived request to time out and
+        no polling loop in the app.
+      </li>
+      <li>
+        <strong>Defensive structured-output parsing.</strong> Generation requests structured
+        output but never assumes it. Parsing degrades through progressively looser strategies,
+        so a malformed model response still yields a usable story instead of a failed job.
+      </li>
+      <li>
+        <strong>Word-level read-along playback.</strong> Timing data from the synthesis API
+        drives per-word highlighting against the audio playhead, with auto-scroll keeping the
+        current word visible — the feature that makes the app usable by a child still learning
+        to read.
+      </li>
+      <li>
+        <strong>Transaction-based credit handling.</strong> Credits are reserved and debited
+        inside a server-side transaction scaled to story length. The client checks affordability
+        for user experience only; the server is the authority.
+      </li>
+      <li>
+        <strong>Idempotent subscription webhook.</strong> Entitlement events are deduplicated
+        against a persisted ledger before any balance changes, so provider retries cannot
+        double-credit an account. Refunds reverse their grant and balances clamp non-negative.
+      </li>
+      <li>
+        <strong>Randomised explore-feed sampling.</strong> A fresh random sample per theme using
+        stored randomisation keys and seeded range queries with wrap-around, then rotating the
+        keys of the rows returned — sampling without scanning the collection or maintaining a
+        cursor.
+      </li>
+      <li>
+        <strong>Safety inside the pipeline.</strong> Age is a generation constraint rather than a
+        display preference, and unsuitable input halts the pipeline before a story exists — the
+        record is marked rejected and nothing reaches the library.
+      </li>
+    </ul>
+  </CaseSection>
+
+  <CaseSection label="Product" aside="Published App Store listing images" wide>
+    <div class="shots">
+      {
+        shots.map((shot) => (
+          <Figure
+            image={shot.image}
+            alt={shot.alt}
+            caption={shot.caption}
+            contain
+            ratio="9 / 19.5"
+            zoom
+            sizes="(min-width: 900px) 24vw, 45vw"
+            widths={[300, 480, 640]}
+          />
+        ))
+      }
+    </div>
+  </CaseSection>
+
+  <CaseSection label="Result" aside="Live and maintained">
+    <p class="lead">
+      Pictale is published and live on the Apple App Store — Education, rated 4+, free with
+      in-app purchases, iOS 18 or later.
+    </p>
+    <p>
+      <ExternalLink href="https://apps.apple.com/tr/app/pictale-draw-your-story/id6760588423?l=tr" standalone>
+        Pictale: Draw Your Story on the App Store
+      </ExternalLink>
+    </p>
+    <p class="note">
+      Source code is private — Pictale is an actively developed production application. The
+      linked repository is a portfolio overview with high-level architecture and publicly
+      available product media only.
+    </p>
+  </CaseSection>
+</CaseStudyLayout>
+
+<style>
+  .bullets { display: grid; gap: var(--s4); }
+
+  .bullets li {
+    position: relative;
+    padding-left: var(--s5);
+    color: var(--text-secondary);
+  }
+
+  .bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 8px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .note {
+    border-left: 1px solid var(--accent);
+    padding-left: var(--s5);
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+  }
+
+  .shots {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s5);
+  }
+
+  @media (min-width: 900px) {
+    .shots { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s4); }
+  }
+</style>
