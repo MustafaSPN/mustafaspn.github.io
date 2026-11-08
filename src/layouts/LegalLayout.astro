@@ -1,0 +1,113 @@
+---
+/**
+ * Long-form legal text (privacy policy, terms) for an app. The body comes from a
+ * Markdown file in src/content/legal and is rendered into a readable measure.
+ */
+import BaseLayout from './BaseLayout.astro';
+import { site } from '../data/site';
+import { pageUrl } from '../lib/paths';
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  title: string;
+  description: string;
+  path: string;
+  effectiveDate: string;
+  app: string;
+  /** App icon shown beside the app name. */
+  icon?: ImageMetadata;
+  /** The sibling document, linked under the title. */
+  sibling: { label: string; href: string };
+}
+
+const { title, description, path, effectiveDate, app, icon, sibling } = Astro.props;
+---
+
+<BaseLayout title={`${title} — ${site.name}`} description={description} path={path}>
+  <article class="legal shell">
+    <header class="legal__header">
+      <div class="legal__app">
+        {icon && <Image class="legal__icon" src={icon} alt="" width={56} height={56} densities={[1, 2, 3]} />}
+        <p class="label legal__app-name">{app}</p>
+      </div>
+      <h1 class="legal__title">{title}</h1>
+      <p class="mono legal__meta">
+        Effective date: <time>{effectiveDate}</time>
+        <span aria-hidden="true">·</span>
+        <a class="link" href={pageUrl(sibling.href)}>{sibling.label}</a>
+      </p>
+    </header>
+
+    <div class="legal__body measure">
+      <slot />
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .legal { padding-block: clamp(48px, 9vw, 128px); }
+
+  .legal__header {
+    padding-bottom: var(--s7);
+    margin-bottom: var(--s7);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .legal__app {
+    display: flex;
+    align-items: center;
+    gap: var(--s4);
+    margin-bottom: var(--s5);
+  }
+  .legal__app-name { color: var(--accent); }
+  /* iOS-style corner on the app icon, the one place the 2px radius cap gives way. */
+  .legal__icon { width: 56px; height: 56px; border-radius: 12px; flex: none; }
+
+  .legal__title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--fs-display);
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+    max-width: 18ch;
+  }
+
+  .legal__meta {
+    margin-top: var(--s5);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s2) var(--s3);
+    color: var(--text-secondary);
+    font-size: var(--fs-small);
+  }
+
+  .legal__body { color: var(--text-secondary); overflow-wrap: anywhere; }
+
+  .legal__body :global(h2) {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--fs-h3);
+    letter-spacing: -0.015em;
+    color: var(--text);
+    margin-top: var(--s7);
+    margin-bottom: var(--s3);
+  }
+
+  .legal__body :global(h2:first-child) { margin-top: 0; }
+
+  .legal__body :global(p),
+  .legal__body :global(ul) { margin-top: var(--s4); }
+
+  .legal__body :global(ul) { padding-left: 1.25em; list-style: disc; }
+  .legal__body :global(li + li) { margin-top: var(--s2); }
+  .legal__body :global(li::marker) { color: var(--accent); }
+
+  .legal__body :global(a) {
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-underline-offset: 0.2em;
+  }
+  .legal__body :global(a:hover) { color: var(--accent); }
+</style>

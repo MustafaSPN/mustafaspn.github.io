@@ -1,0 +1,17 @@
+---
+import LegalLayout from '../../layouts/LegalLayout.astro';
+import icon from '../../assets/media/astro-flow-jam-icon.png';
+import { Content, frontmatter } from '../../content/legal/privacy-policy.md';
+---
+
+<LegalLayout
+  title={frontmatter.title}
+  description="How Astro Flow Jam handles data: on-device saves, Google AdMob, Firebase Analytics and Crashlytics, and Apple in-app purchases."
+  path="/astro-flow-jam/privacy"
+  effectiveDate={frontmatter.effectiveDate}
+  app="Astro Flow Jam"
+  icon={icon}
+  sibling={{ label: 'Terms of Use', href: '/astro-flow-jam/terms' }}
+>
+  <Content />
+</LegalLayout>

@@ -1,0 +1,17 @@
+---
+import LegalLayout from '../../layouts/LegalLayout.astro';
+import icon from '../../assets/media/astro-flow-jam-icon.png';
+import { Content, frontmatter } from '../../content/legal/terms-of-use.md';
+---
+
+<LegalLayout
+  title={frontmatter.title}
+  description="Terms of Use for Astro Flow Jam, an iPhone and iPad puzzle game: license, fair play, in-app purchases, virtual items and advertising."
+  path="/astro-flow-jam/terms"
+  effectiveDate={frontmatter.effectiveDate}
+  app="Astro Flow Jam"
+  icon={icon}
+  sibling={{ label: 'Privacy Policy', href: '/astro-flow-jam/privacy' }}
+>
+  <Content />
+</LegalLayout>
