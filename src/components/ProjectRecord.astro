@@ -1,6 +1,6 @@
 ---
 import Figure from './Figure.astro';
-import type { Project } from '../data/projects';
+import type { Project, RecordVariant } from '../data/projects';
 import { projectNumber } from '../data/projects';
 import { pageUrl } from '../lib/paths';
 
@@ -8,15 +8,19 @@ interface Props {
   project: Project;
   /** Metrics shown by the `data` variant instead of photography. */
   metrics?: { value: string; unit?: string; label: string }[];
+  /** Layout override chosen by the profile page. */
+  variant?: RecordVariant;
+  /** Display number override, so each profile numbers its own order. */
+  number?: string;
 }
 
-const { project, metrics = [] } = Astro.props;
-const n = projectNumber(project.slug);
+const { project, metrics = [], variant, number } = Astro.props;
+const n = number ?? projectNumber(project.slug);
 const href = pageUrl(`/projects/${project.slug}`);
-const v = project.variant;
+const v = variant ?? project.variant;
 ---
 
-<article class:list={['record', `record--${v}`]}>
+<article class:list={['record', `record--${v}`, project.imageRatio && 'record--own-ratio']}>
   <div class="record__head reveal">
     <span class="record__number" aria-hidden="true">{n}</span>
     <div class="record__titles">
@@ -27,6 +31,7 @@ const v = project.variant;
         </a>
       </h3>
       <p class="record__subtitle">{project.subtitle}</p>
+      {project.comingSoon && <p class="record__soon chip">Case study coming soon</p>}
     </div>
   </div>
 
@@ -66,7 +71,7 @@ const v = project.variant;
   }
 
   {
-    v === 'data' && metrics.length > 0 && (
+    metrics.length > 0 && (v !== 'compact' || !project.image) && (
       <ul class="record__metrics reveal">
         {metrics.map((m) => (
           <li class="record__metric">
@@ -91,6 +96,19 @@ const v = project.variant;
 
       <div class="record__actions">
         <span class="record__cta" aria-hidden="true">Case study</span>
+        {
+          project.appStoreUrl && (
+            <a
+              class="record__source"
+              href={project.appStoreUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              App Store<span class="arrow" aria-hidden="true">↗</span>
+              <span class="visually-hidden"> — {project.title} (opens in a new tab)</span>
+            </a>
+          )
+        }
         {
           project.repo && (
             <a
@@ -126,12 +144,23 @@ const v = project.variant;
     position: relative;
     display: grid;
     gap: var(--s5);
-    padding-top: var(--s5);
-    border-top: 1px solid var(--rule);
-    transition: border-color 320ms var(--ease);
+    padding: clamp(16px, 2.6vw, 32px);
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-card);
+    transition: border-color 240ms var(--ease), background-color 240ms var(--ease),
+      transform 240ms var(--ease);
   }
 
-  .record:hover { border-top-color: var(--rule-strong); }
+  .record:hover, .record:focus-within {
+    border-color: rgba(167, 139, 250, 0.35);
+    background: var(--card-hover);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .record:hover { transform: translateY(-2px); }
+  }
 
   /* ---- head ---- */
 
@@ -143,23 +172,32 @@ const v = project.variant;
   }
 
   .record__number {
+    display: inline-grid;
+    place-items: center;
+    min-width: 40px;
+    height: 28px;
+    padding-inline: 8px;
+    margin-top: 0.35em;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--r-pill);
     font-family: var(--font-mono);
     font-size: var(--fs-label);
-    letter-spacing: 0.12em;
     color: var(--text-muted);
-    padding-top: 0.5em;
-    transition: color 320ms var(--ease);
+    transition: color 240ms var(--ease), border-color 240ms var(--ease), background-color 240ms var(--ease);
   }
 
   .record:hover .record__number,
-  .record:focus-within .record__number { color: var(--accent); }
+  .record:focus-within .record__number {
+    color: var(--accent);
+    border-color: rgba(167, 139, 250, 0.4);
+    background: var(--accent-wash);
+  }
 
   .record__title {
-    font-family: var(--font-display);
-    font-weight: 600;
-    letter-spacing: -0.03em;
-    line-height: 1.02;
-    font-size: clamp(1.75rem, 4.6vw, 3.1rem);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    font-size: clamp(1.6rem, 3.8vw, 2.6rem);
   }
 
   /* The whole record is one click target; the source link sits above it. */
@@ -175,10 +213,11 @@ const v = project.variant;
   .record__subtitle {
     margin-top: var(--s2);
     color: var(--text-muted);
-    font-family: var(--font-mono);
     font-size: var(--fs-small);
     line-height: 1.5;
   }
+
+  .record__soon { margin-top: var(--s3); color: var(--accent); }
 
   /* ---- body ---- */
 
@@ -193,7 +232,7 @@ const v = project.variant;
     display: grid;
     gap: var(--s4);
     margin-top: var(--s5);
-    padding-top: var(--s4);
+    padding-top: var(--s5);
     border-top: 1px solid var(--rule);
   }
 
@@ -205,34 +244,33 @@ const v = project.variant;
   }
 
   .record__cta {
-    font-family: var(--font-mono);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding-inline: 16px;
+    border-radius: var(--r-pill);
+    background: rgba(255, 255, 255, 0.06);
     font-size: var(--fs-small);
+    font-weight: 500;
     color: var(--text);
-    position: relative;
-    padding-bottom: 2px;
+    transition: background-color 240ms var(--ease), color 240ms var(--ease);
   }
 
   .record__cta::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 1px;
-    background: var(--accent);
-    transform: scaleX(0);
-    transform-origin: left center;
-    transition: transform 280ms var(--ease);
+    content: '→';
+    transition: transform 240ms var(--ease);
   }
 
-  .record:hover .record__cta::after,
-  .record:focus-within .record__cta::after { transform: scaleX(1); }
+  .record:hover .record__cta,
+  .record:focus-within .record__cta { background: var(--accent-strong); color: #fff; }
+  .record:hover .record__cta::after { transform: translateX(3px); }
 
   .record__source {
     position: relative;
     z-index: 2;
-    font-family: var(--font-mono);
     font-size: var(--fs-small);
+    font-weight: 500;
     color: var(--text-muted);
     text-decoration: none;
     display: inline-flex;
@@ -247,21 +285,24 @@ const v = project.variant;
 
   .record__metrics {
     display: grid;
-    gap: var(--s5);
-    border-top: 1px solid var(--rule);
-    border-bottom: 1px solid var(--rule);
-    padding-block: var(--s6);
+    gap: var(--s3);
   }
 
-  .record__metric { display: grid; gap: var(--s2); }
+  .record__metric {
+    display: grid;
+    gap: var(--s2);
+    padding: var(--s5);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-md);
+    background: linear-gradient(180deg, rgba(167, 139, 250, 0.08), rgba(167, 139, 250, 0.01));
+  }
 
   .record__metric-value {
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: clamp(2.25rem, 6vw, 4rem);
-    letter-spacing: -0.04em;
+    font-weight: 700;
+    font-size: clamp(2.25rem, 5vw, 3.5rem);
+    letter-spacing: -0.045em;
     line-height: 0.95;
-    color: var(--accent);
+    color: var(--text);
     display: flex;
     align-items: baseline;
     gap: 0.14em;
@@ -275,10 +316,7 @@ const v = project.variant;
   }
 
   .record__metric-label {
-    font-family: var(--font-mono);
-    font-size: var(--fs-label);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    font-size: var(--fs-small);
     color: var(--text-muted);
     line-height: 1.5;
     max-width: 26ch;
@@ -288,21 +326,22 @@ const v = project.variant;
 
   .record__highlights {
     display: grid;
-    gap: 0;
-    border-top: 1px solid var(--rule);
+    gap: var(--s2);
   }
 
   .record__highlight {
     display: grid;
     gap: var(--s1);
-    padding-block: var(--s4);
-    border-bottom: 1px solid var(--rule);
+    padding: var(--s4);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-md);
+    background: rgba(255, 255, 255, 0.02);
   }
 
   .record__highlight-term {
     font-family: var(--font-mono);
     font-size: var(--fs-label);
-    letter-spacing: 0.12em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--accent);
   }
@@ -316,25 +355,35 @@ const v = project.variant;
 
   /* ---- compact ---- */
 
-  .record--compact .record__title { font-size: clamp(1.35rem, 2.6vw, 1.85rem); }
+  .record--compact .record__title { font-size: clamp(1.35rem, 2.4vw, 1.75rem); }
+  /* head · media/metrics · body; the body takes the spare height so the footer
+     lines up across cards in the same grid row. */
+  .record--compact { grid-template-rows: auto auto 1fr; }
+  .record--compact .record__body { display: flex; flex-direction: column; }
+  .record--compact .record__foot { margin-top: auto; }
+  .record--compact .record__result { margin-bottom: var(--s5); }
   .record--compact .record__result { font-size: var(--fs-body); max-width: 46ch; }
-  .record--compact .record__metrics { display: none; }
+  /* Compact cards stack the metrics as rows, like highlights, so a project with
+     no photograph still fills its card. */
+  .record--compact .record__metrics { grid-template-columns: 1fr !important; gap: var(--s2); }
+  .record--compact .record__metric {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--s4);
+    padding: var(--s4);
+  }
+  .record--compact .record__metric-value { font-size: clamp(1.6rem, 3vw, 2.1rem); min-width: 4.2ch; }
 
   /* ================= breakpoints ================= */
 
   /* Mobile is designed, not shrunk: the flagship photograph runs edge to edge and
      is cropped taller, so the vehicle stays large on a phone. */
   @media (max-width: 699px) {
-    .record--feature .record__media { margin-inline: calc(var(--gutter) * -1); }
+    .record--feature .record__media :global(.media) { aspect-ratio: 4 / 3; }
 
-    .record--feature .record__media :global(.media) {
-      aspect-ratio: 4 / 3;
-      border-inline: 0;
-      border-radius: 0;
-    }
-
-    .record--split .record__media :global(.media),
-    .record--compact .record__media :global(.media) { aspect-ratio: 4 / 3; }
+    /* Records with their own ratio (screenshot montages) keep it, so nothing is cropped. */
+    .record--split:not(.record--own-ratio) .record__media :global(.media),
+    .record--compact:not(.record--own-ratio) .record__media :global(.media) { aspect-ratio: 4 / 3; }
   }
 
   @media (min-width: 700px) {
@@ -350,12 +399,12 @@ const v = project.variant;
   @media (min-width: 1024px) {
     .record { gap: var(--s6); }
 
-    .record__head { grid-template-columns: 96px minmax(0, 1fr); }
+    .record__head { grid-template-columns: 64px minmax(0, 1fr); }
 
     /* feature — the media leads, full width, with the text beneath it */
     .record--feature .record__body {
       display: grid;
-      grid-template-columns: 96px minmax(0, 1fr);
+      grid-template-columns: 64px minmax(0, 1fr);
       gap: var(--s4);
     }
     .record--feature .record__body > * { grid-column: 2; }
@@ -379,7 +428,7 @@ const v = project.variant;
     /* data — metrics beside the description */
     .record--data .record__body {
       display: grid;
-      grid-template-columns: 96px minmax(0, 1fr);
+      grid-template-columns: 64px minmax(0, 1fr);
       gap: var(--s4);
     }
     .record--data .record__body > * { grid-column: 2; }

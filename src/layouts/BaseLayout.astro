@@ -1,13 +1,6 @@
 ---
-import '@fontsource-variable/archivo/wght.css';
-import '@fontsource/ibm-plex-sans/latin-400.css';
-import '@fontsource/ibm-plex-sans/latin-500.css';
-import '@fontsource/ibm-plex-sans/latin-ext-400.css';
-import '@fontsource/ibm-plex-sans/latin-ext-500.css';
-import '@fontsource/ibm-plex-mono/latin-400.css';
-import '@fontsource/ibm-plex-mono/latin-500.css';
-import '@fontsource/ibm-plex-mono/latin-ext-400.css';
-import '@fontsource/ibm-plex-mono/latin-ext-500.css';
+import '@fontsource-variable/inter/wght.css';
+import '@fontsource-variable/jetbrains-mono/wght.css';
 import '../styles/global.css';
 
 import SiteHeader from '../components/SiteHeader.astro';
@@ -22,9 +15,13 @@ interface Props {
   path: string;
   /** Structured data for this page, if any. */
   jsonLd?: Record<string, unknown>;
+  /** Role shown beside the name in the header. */
+  role?: string;
+  /** Path of the profile page whose sections the header links to ('' = homepage). */
+  home?: string;
 }
 
-const { title, description, path, jsonLd } = Astro.props;
+const { title, description, path, jsonLd, role, home = '' } = Astro.props;
 
 const canonical = absoluteUrl(path, Astro.site);
 const ogImage = absoluteUrl('/og.png', Astro.site);
@@ -40,7 +37,7 @@ const ogImage = absoluteUrl('/og.png', Astro.site);
     <link rel="canonical" href={canonical} />
 
     <meta name="author" content={site.name} />
-    <meta name="theme-color" content="#0d0e10" />
+    <meta name="theme-color" content="#09090b" />
     <meta name="color-scheme" content="dark" />
 
     <link rel="icon" href={withBase('/favicon.svg')} type="image/svg+xml" />
@@ -73,7 +70,7 @@ const ogImage = absoluteUrl('/og.png', Astro.site);
 
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
-    <SiteHeader />
+    <SiteHeader role={role} home={home} />
     <main id="main">
       <slot />
     </main>

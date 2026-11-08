@@ -20,6 +20,8 @@ interface Props {
     caption?: string;
     contain?: boolean;
     ratio?: string;
+    /** CSS object-position for a cropped hero image. */
+    position?: string;
   };
   /** Full technology list for the page footer. */
   stack: { group: string; items: string[] }[];
@@ -89,6 +91,7 @@ const jsonLd = {
             caption={hero.caption}
             contain={hero.contain}
             ratio={hero.ratio}
+            position={hero.position}
             loading="eager"
             sizes="(min-width: 1440px) 1400px, 100vw"
           />
@@ -168,9 +171,9 @@ const jsonLd = {
 
   .case__title {
     font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 750;
     font-size: var(--fs-display);
-    letter-spacing: -0.035em;
+    letter-spacing: -0.045em;
     line-height: 1;
   }
 

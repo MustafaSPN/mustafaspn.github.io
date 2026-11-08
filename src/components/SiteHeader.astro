@@ -1,13 +1,20 @@
 ---
 import { site, nav } from '../data/site';
 import { withBase } from '../lib/paths';
+
+interface Props {
+  role?: string;
+  home?: string;
+}
+
+const { role = site.role, home = '' } = Astro.props;
 ---
 
 <header class="header">
   <div class="shell header__inner">
     <a class="header__mark" href={withBase('/')}>
       <span class="header__name">Mustafa Sepen</span>
-      <span class="header__role">Robotics Software Engineer</span>
+      <span class="header__role">{role}</span>
     </a>
 
     <nav class="header__nav" aria-label="Primary">
@@ -15,7 +22,7 @@ import { withBase } from '../lib/paths';
         {
           nav.map((item) => (
             <li class:list={['header__item', !item.primaryMobile && 'header__item--wide']}>
-              <a class="header__link" href={withBase(item.href)}>
+              <a class="header__link" href={withBase(`${home}${item.href}`)}>
                 {item.label}
               </a>
             </li>
@@ -53,7 +60,9 @@ import { withBase } from '../lib/paths';
     position: sticky;
     top: 0;
     z-index: 100;
-    background: var(--bg);
+    background: rgba(9, 9, 11, 0.72);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    backdrop-filter: saturate(160%) blur(14px);
     border-bottom: 1px solid var(--rule);
   }
 
@@ -68,52 +77,49 @@ import { withBase } from '../lib/paths';
   .header__mark {
     text-decoration: none;
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: var(--s3);
     min-width: 0;
-    /* Baseline alignment is kept for the wordmark, so the 44px touch height comes
-       from padding rather than from centring the two labels. */
-    padding-block: var(--s3);
+    min-height: 44px;
   }
 
   .header__name {
-    font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 650;
     font-size: 0.9375rem;
     letter-spacing: -0.015em;
     color: var(--text);
     white-space: nowrap;
   }
 
-  /* The role sits beside the name as a document subtitle, not as a tagline. */
   .header__role {
     display: none;
-    font-family: var(--font-mono);
-    font-size: var(--fs-label);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: var(--fs-small);
     color: var(--text-muted);
     white-space: nowrap;
+    padding-left: var(--s3);
+    border-left: 1px solid var(--rule-strong);
   }
 
   .header__nav {
     display: flex;
     align-items: center;
-    gap: var(--s4);
+    gap: var(--s3);
   }
 
   .header__list {
     display: flex;
     align-items: center;
-    gap: var(--s5);
+    gap: 2px;
   }
 
-  .header__sep {
-    width: 1px;
-    height: 14px;
-    background: var(--rule-strong);
-    display: none;
+  .header__list:not(.header__list--external) {
+    padding: 4px;
+    border: 1px solid var(--rule);
+    border-radius: var(--r-pill);
+    background: rgba(255, 255, 255, 0.02);
   }
+
+  .header__sep { display: none; }
 
   /* Secondary items are hidden on small screens; they remain reachable from the
      footer, which needs no JavaScript and no hamburger. */
@@ -123,42 +129,34 @@ import { withBase } from '../lib/paths';
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 44px;
-    /* Widens the hit box for short labels such as "CV" without changing the type. */
-    padding-inline: var(--s2);
-    margin-inline: calc(var(--s2) * -1);
-    font-family: var(--font-mono);
+    min-height: 36px;
+    min-width: 44px;
+    padding-inline: 14px;
+    border-radius: var(--r-pill);
     font-size: var(--fs-small);
-    color: var(--text-muted);
+    font-weight: 500;
+    color: var(--text-secondary);
     text-decoration: none;
-    position: relative;
-    transition: color 200ms var(--ease);
+    transition: color 200ms var(--ease), background-color 200ms var(--ease);
   }
 
-  .header__link::after {
-    content: '';
-    position: absolute;
-    left: var(--s2);
-    right: var(--s2);
-    bottom: 12px;
-    height: 1px;
-    background: var(--accent);
-    transform: scaleX(0);
-    transform-origin: left center;
-    transition: transform 220ms var(--ease);
+  .header__link:hover, .header__link:focus-visible {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.07);
   }
 
-  .header__link:hover, .header__link:focus-visible { color: var(--text); }
-  .header__link:hover::after, .header__link:focus-visible::after { transform: scaleX(1); }
-
-  .header__link--cv { color: var(--text); }
+  .header__link--cv {
+    color: #fff;
+    background: var(--accent-strong);
+    min-height: 40px;
+  }
+  .header__link--cv:hover, .header__link--cv:focus-visible { background: #6d28d9; color: #fff; }
 
   @media (min-width: 768px) {
     .header__item--wide { display: block; }
-    .header__sep { display: block; }
   }
 
-  @media (min-width: 1024px) {
+  @media (min-width: 1100px) {
     .header__role { display: block; }
   }
 </style>

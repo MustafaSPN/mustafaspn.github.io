@@ -1,67 +1,73 @@
 /* ============================================================================
    Mustafa Sepen — Robotics Software Engineer
-   Global stylesheet. See DESIGN.md for the reasoning behind these decisions.
+   Global stylesheet (v2 — modern dark). See DESIGN.md for the reasoning.
 
-   Invariants enforced here:
-     - no gradients, no box-shadow, no backdrop-filter anywhere
-     - border-radius never exceeds 2px
-     - exactly one accent colour
+   Direction: dark surface, Inter + JetBrains Mono, one violet accent, soft
+   rounded cards with hairline borders, restrained glows and 200–250ms hovers.
    ========================================================================== */
 
 /* ---------- 1. Tokens ---------------------------------------------------- */
 
 :root {
-  /* Ground */
-  --bg: #0d0e10;
-  --bg-raised: #131417;
-  --bg-sunken: #0a0b0c;
+  /* Ground — near-black with a faint cool cast */
+  --bg: #09090b;
+  --bg-raised: #111114;
+  --bg-sunken: #060608;
+  --card: #0f0f13;
+  --card-hover: #14141a;
 
   /* Type */
-  --text: #e9e7e4;
-  --text-secondary: #a8a7a3;
-  --text-muted: #8b8a86;
+  --text: #fafafa;
+  --text-secondary: #b4b4bd;
+  --text-muted: #8b8b96;
 
   /* Structure */
-  --rule: #26272a;
-  --rule-strong: #35363a;
+  --rule: rgba(255, 255, 255, 0.08);
+  --rule-strong: rgba(255, 255, 255, 0.14);
 
-  /* The single accent */
-  --accent: #e4572e;
-  --accent-wash: rgba(228, 87, 46, 0.12);
+  /* Accent — violet, with a fuchsia partner used only in glows */
+  --accent: #a78bfa;
+  --accent-strong: #7c3aed;
+  --accent-2: #e879f9;
+  --accent-wash: rgba(167, 139, 250, 0.12);
+  --success: #34d399;
+
+  /* Radii */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 20px;
+  --r-pill: 999px;
 
   /* Families */
-  --font-display: 'Archivo Variable', 'Archivo', system-ui, sans-serif;
-  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-display: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* Scale */
-  --fs-hero: clamp(2.75rem, 11vw, 8.5rem);
-  --fs-display: clamp(2rem, 5.2vw, 3.9rem);
-  --fs-h2: clamp(1.5rem, 3.2vw, 2.35rem);
-  --fs-h3: clamp(1.15rem, 2vw, 1.5rem);
-  --fs-lead: clamp(1.0625rem, 1.55vw, 1.3rem);
+  --fs-hero: clamp(3rem, 10vw, 7.5rem);
+  --fs-display: clamp(2rem, 5vw, 3.6rem);
+  --fs-h2: clamp(1.75rem, 3.6vw, 2.75rem);
+  --fs-h3: clamp(1.15rem, 2vw, 1.45rem);
+  --fs-lead: clamp(1.0625rem, 1.5vw, 1.25rem);
   --fs-body: 1rem;
   --fs-small: 0.875rem;
-  --fs-label: 0.6875rem;
+  --fs-label: 0.75rem;
 
   /* Space */
   --s1: 4px;   --s2: 8px;   --s3: 12px;  --s4: 16px;
   --s5: 24px;  --s6: 32px;  --s7: 48px;  --s8: 64px;
   --s9: 96px;  --s10: 128px; --s11: 160px;
 
-  --section-y: clamp(64px, 9vw, 144px);
-  --gutter: clamp(20px, 5vw, 72px);
-  --shell: 1440px;
+  --section-y: clamp(72px, 9vw, 136px);
+  --gutter: clamp(16px, 5vw, 64px);
+  --shell: 1240px;
   --measure: 68ch;
-  --header-h: 56px;
+  --header-h: 64px;
 
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 20px 40px -24px rgba(0, 0, 0, 0.6);
 
   color-scheme: dark;
-}
-
-@media (min-width: 1024px) {
-  :root { --fs-body: 1.0625rem; }
 }
 
 /* ---------- 2. Reset ----------------------------------------------------- */
@@ -80,7 +86,8 @@ body {
   color: var(--text);
   font-family: var(--font-sans);
   font-size: var(--fs-body);
-  line-height: 1.68;
+  line-height: 1.65;
+  font-feature-settings: 'cv11', 'ss01';
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -103,8 +110,8 @@ table { border-collapse: collapse; }
 
 :focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 1px;
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .skip-link {
@@ -115,6 +122,7 @@ table { border-collapse: collapse; }
   padding: var(--s3) var(--s5);
   background: var(--bg-raised);
   border: 1px solid var(--accent);
+  border-radius: var(--r-pill);
   color: var(--text);
   font-family: var(--font-mono);
   font-size: var(--fs-small);
@@ -162,27 +170,33 @@ table { border-collapse: collapse; }
 
 .section-rule {
   display: flex;
-  align-items: baseline;
-  gap: var(--s4);
-  padding-bottom: var(--s5);
-  border-top: 1px solid var(--rule);
-  padding-top: var(--s4);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s3);
+  margin-bottom: clamp(32px, 5vw, 56px);
 }
 
 .section-rule__index {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 4px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-pill);
+  background: var(--accent-wash);
   font-family: var(--font-mono);
   font-size: var(--fs-label);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   color: var(--accent);
-  flex: none;
 }
 
 .section-rule__label {
-  font-family: var(--font-mono);
-  font-size: var(--fs-label);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  color: var(--text);
 }
 
 /* ---------- 6. Typography utilities -------------------------------------- */
@@ -197,15 +211,15 @@ table { border-collapse: collapse; }
 .label {
   font-family: var(--font-mono);
   font-size: var(--fs-label);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
 
 .display {
   font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.04em;
   line-height: 1.02;
   font-size: var(--fs-display);
 }
@@ -242,8 +256,8 @@ table { border-collapse: collapse; }
   color: var(--text);
   background: var(--bg-raised);
   border: 1px solid var(--rule);
-  padding: 0.08em 0.36em;
-  border-radius: 2px;
+  padding: 0.1em 0.4em;
+  border-radius: 6px;
   white-space: nowrap;
 }
 
@@ -289,26 +303,43 @@ table { border-collapse: collapse; }
 }
 a:hover > .arrow { transform: translate(2px, -2px); }
 
-/* Source / CTA button — a ruled box, not a pill. */
+/* Buttons — pills. Primary is a filled accent; the default is a quiet outline. */
 .button {
   display: inline-flex;
   align-items: center;
-  gap: var(--s3);
+  justify-content: center;
+  gap: var(--s2);
   min-height: 46px;
-  padding: var(--s3) var(--s5);
+  padding: 10px 22px;
   border: 1px solid var(--rule-strong);
-  border-radius: 2px;
-  font-family: var(--font-mono);
-  font-size: var(--fs-small);
-  letter-spacing: 0.02em;
+  border-radius: var(--r-pill);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
   text-decoration: none;
   color: var(--text);
-  background: transparent;
-  transition: border-color 220ms var(--ease), color 220ms var(--ease);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: border-color 220ms var(--ease), background-color 220ms var(--ease),
+    transform 220ms var(--ease), box-shadow 220ms var(--ease);
 }
-.button:hover, .button:focus-visible { border-color: var(--accent); }
-.button--primary { border-color: var(--text); }
-.button--primary:hover, .button--primary:focus-visible { border-color: var(--accent); }
+.button:hover, .button:focus-visible {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+}
+.button--primary {
+  background: var(--accent-strong);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 8px 24px -10px rgba(124, 58, 237, 0.8);
+}
+.button--primary:hover, .button--primary:focus-visible {
+  background: #6d28d9;
+  border-color: transparent;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px -10px rgba(124, 58, 237, 0.9);
+}
 
 /* ---------- 8. Media ----------------------------------------------------- */
 
@@ -317,7 +348,7 @@ a:hover > .arrow { transform: translate(2px, -2px); }
   overflow: hidden;
   background: var(--bg-raised);
   border: 1px solid var(--rule);
-  border-radius: 2px;
+  border-radius: var(--r-md);
 }
 
 .media > img, .media > video {
@@ -341,7 +372,7 @@ a:hover > .arrow { transform: translate(2px, -2px); }
   a:hover .media--zoom > img,
   a:hover .media--zoom > video,
   .record:hover .media--zoom > img,
-  .record:hover .media--zoom > video { transform: scale(1.03); }
+  .record:hover .media--zoom > video { transform: scale(1.025); }
 }
 
 figure { margin: 0; }
@@ -369,7 +400,7 @@ figcaption {
 .meta-rail__term {
   font-family: var(--font-mono);
   font-size: var(--fs-label);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
@@ -393,27 +424,18 @@ figcaption {
 
 /* ---------- 10. Tag list ------------------------------------------------- */
 
-.tags { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); }
+.tags { display: flex; flex-wrap: wrap; gap: var(--s2); }
 
 .tags li {
   font-family: var(--font-mono);
   font-size: var(--fs-label);
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  padding: var(--s1) 0;
-  position: relative;
-}
-
-.tags li:not(:last-child)::after {
-  content: '';
-  position: absolute;
-  right: calc(var(--s4) / -2);
-  top: 50%;
-  width: 1px;
-  height: 10px;
-  transform: translateY(-50%);
-  background: var(--rule-strong);
+  letter-spacing: 0.01em;
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.025);
+  line-height: 1.5;
 }
 
 /* ---------- 11. Spec table ----------------------------------------------- */
@@ -434,8 +456,8 @@ figcaption {
   overflow-x: auto;
   max-width: 100%;
   border: 1px solid var(--rule);
-  border-radius: 2px;
-  background: var(--bg-raised);
+  border-radius: var(--r-md);
+  background: var(--card);
 }
 
 .spec-table {
@@ -476,12 +498,42 @@ figcaption {
 .spec-table tr:last-child th, .spec-table tr:last-child td { border-bottom: 0; }
 .spec-table .num { font-family: var(--font-mono); color: var(--accent); white-space: nowrap; }
 
+/* ---------- 11b. Cards and chips ---------------------------------------- */
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 5px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.gradient-text {
+  background: linear-gradient(180deg, #ffffff 30%, rgba(255, 255, 255, 0.62));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 /* ---------- 12. Entrance reveal ------------------------------------------ */
 
 .reveal {
   opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 520ms var(--ease), transform 520ms var(--ease);
+  transform: translateY(16px);
+  transition: opacity 560ms var(--ease), transform 560ms var(--ease);
   will-change: opacity, transform;
 }
 .reveal.is-visible { opacity: 1; transform: none; }

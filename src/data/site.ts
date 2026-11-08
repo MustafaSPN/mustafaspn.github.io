@@ -2,8 +2,8 @@
 
 export const site = {
   name: 'Mustafa Sepen',
-  role: 'Robotics Software Engineer',
-  title: 'Mustafa Sepen — Robotics Software Engineer',
+  role: 'Robotics & Game Developer',
+  title: 'Mustafa Sepen — Robotics & Game Developer',
   disciplines: [
     'Autonomous Navigation',
     'Localization',

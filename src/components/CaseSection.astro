@@ -29,7 +29,7 @@ const headingId = id ?? label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 </section>
 
 <style>
-  .case-section + :global(.case-section) { margin-top: clamp(56px, 8vw, 112px); }
+  :global(*) + .case-section { margin-top: clamp(64px, 8vw, 112px); }
   .case-section__aside { color: var(--text-muted); }
   .case-section__aside :global(p) { line-height: 1.7; }
 </style>

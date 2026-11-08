@@ -1,0 +1,219 @@
+---
+import CaseStudyLayout from '../../layouts/CaseStudyLayout.astro';
+import CaseSection from '../../components/CaseSection.astro';
+import Figure from '../../components/Figure.astro';
+import ExternalLink from '../../components/ExternalLink.astro';
+import { getProject } from '../../data/projects';
+
+import hero from '../../assets/media/kelimetriks-hero.png';
+import title from '../../assets/media/kelimetriks-title-screen.png';
+import gameplay from '../../assets/media/kelimetriks-gameplay.png';
+import joker from '../../assets/media/kelimetriks-joker-and-penalty-letters.png';
+import leaderboard from '../../assets/media/kelimetriks-leaderboard.png';
+import wordData from '../../assets/media/kelimetriks-word-frequency-database.png';
+
+const project = getProject('kelimetriks');
+
+const stack = [
+  { group: 'Engine', items: ['Unity 2022.3 (2D, IL2CPP)', 'C#', 'Android and iOS'] },
+  { group: 'Gameplay', items: ['DOTween', 'Unity UI', 'TextMeshPro', 'Unity Localization (TR/EN)'] },
+  { group: 'Online', items: ['Firebase Auth', 'Realtime Database', 'Firebase Analytics'] },
+  { group: 'Monetization', items: ['Unity Ads — rewarded and interstitial'] },
+];
+
+const shots = [
+  { image: gameplay, alt: 'Letters falling into the six-column grid, with the score and coin counter above.', caption: 'Letters fall and stack' },
+  { image: joker, alt: 'A late game with a star joker tile and red penalty tiles in the grid.', caption: 'Joker and penalty tiles' },
+  { image: leaderboard, alt: 'The top-20 leaderboard, loaded live from Realtime Database.', caption: 'Live top-20 leaderboard' },
+];
+
+const lookup = `Dictionary<char, Dictionary<int, HashSet<string>>> WordList;
+
+public bool SearchWord(string word)
+{
+    return WordList.TryGetValue(word[0], out var byLength)
+           && byLength.TryGetValue(word.Length, out var words)
+           && words.Contains(word);
+}`;
+---
+
+<CaseStudyLayout
+  project={project}
+  extraMeta={[
+    { term: 'Context', value: 'Final project, Unity internship' },
+    { term: 'Duration', value: 'About four weeks' },
+  ]}
+  hero={{
+    image: hero,
+    alt: 'Three Kelimetriks screens: the bilingual title screen, letters falling into the grid, and a late game with joker and penalty tiles.',
+    caption: 'Development screenshots from 2023, at their original resolution.',
+    contain: true,
+    ratio: '16 / 9',
+  }}
+  stack={stack}
+>
+  <CaseSection label="The game" aside="Spell to survive">
+    <p class="lead">
+      Letters drop Tetris-style into a six-column grid. The player taps letters to spell a
+      Turkish word of up to six letters and submits it. A valid word clears its tiles and the
+      letters above collapse into the gap. The game ends when a column reaches the top.
+    </p>
+    <ul class="bullets">
+      <li>
+        <strong>Letter-based scoring.</strong> Each letter is worth more the rarer it is in
+        Turkish, so hard words pay.
+      </li>
+      <li>
+        <strong>Joker and penalty tiles.</strong> Four correct answers in a row drop a star that
+        clears its row and column. Four wrong answers drop a row of tiles that cannot be
+        selected.
+      </li>
+      <li>
+        <strong>Rising pressure.</strong> The drop interval shrinks from 4 s to 0.5 s as the
+        score climbs. Coins from rare letters buy jokers.
+      </li>
+    </ul>
+  </CaseSection>
+
+  <CaseSection label="Screens" aside="2023 development build" wide>
+    <div class="shots">
+      {
+        [{ image: title, alt: 'Title screen with sign-in and register buttons and a Turkish/English toggle.', caption: 'Title — sign in, TR/EN' }, ...shots].map((shot) => (
+          <Figure
+            image={shot.image}
+            alt={shot.alt}
+            caption={shot.caption}
+            contain
+            ratio="9 / 16"
+            sizes="(min-width: 900px) 24vw, 45vw"
+          />
+        ))
+      }
+    </div>
+  </CaseSection>
+
+  <CaseSection label="Word lookup" aside="Validation on every tap">
+    <p>
+      The internship started from a Turkish word list of roughly 288,942 words, filtered to
+      about 28,054 that fit the game: two to six letters, Turkish alphabet only, uppercase.
+      Words are bucketed by first letter, then by length:
+    </p>
+    <pre class="code"><code>{lookup}</code></pre>
+    <p>
+      Validating <code>ARABA</code> only touches the set of five-letter words starting with
+      <code>A</code>. The same partitioning is what makes letter generation possible: the
+      generator samples a random word of a given first letter and length to decide what to
+      drop, which a flat hash set cannot answer without a scan.
+    </p>
+    <p class="note">
+      The internship report records lookup going from roughly 11 ms to roughly 1 ms with this
+      change. That is a 2023 development-time measurement, not a controlled benchmark.
+    </p>
+  </CaseSection>
+
+  <CaseSection label="Architecture" aside="Managers that never call each other">
+    <ul class="bullets">
+      <li>
+        <strong>Event bus.</strong> Managers talk through a generic broadcast/listener layer.
+        <code>GameManager</code> never calls <code>LetterManager</code>; it broadcasts an event
+        and whoever cares responds. Subscriptions live in <code>OnEnable</code> and
+        <code>OnDisable</code>.
+      </li>
+      <li>
+        <strong>One concern per manager.</strong> Rules, tiles, score, coins, words, leaderboard
+        and auth each have their own owner.
+      </li>
+      <li>
+        <strong>ScriptableObjects as data.</strong> Grid, word lists, colours and shared state are
+        assets, not scene objects. Cell occupancy is kept apart from the tile views, and a
+        column-collapse pass re-targets tiles that are still falling.
+      </li>
+      <li>
+        <strong>Pooling.</strong> 49 letter tiles and the coins are recycled through queues
+        instead of being instantiated during play.
+      </li>
+    </ul>
+  </CaseSection>
+
+  <CaseSection label="Online features" aside="Firebase">
+    <p>
+      Email sign-up with auto-login, a live top-20 leaderboard in Realtime Database, and a
+      word-frequency counter: every accepted word increments a count, and each run sorts words
+      into four difficulty tiers by how often players find them. Common words appear early,
+      rare ones as the score climbs. A single analytics event at game over records score,
+      correct and wrong answers and special tiles used.
+    </p>
+    <Figure
+      image={wordData}
+      alt="Realtime Database view of word counts used to build difficulty tiers."
+      caption="Word-frequency data driving difficulty tiers. Project URL masked."
+      contain
+      sizes="(min-width: 1024px) 680px, 100vw"
+    />
+  </CaseSection>
+
+  <CaseSection label="Status" aside="Preserved as a portfolio project">
+    <p>
+      The repository is kept as an internship and engineering portfolio piece. The original
+      Firebase backend is not maintained, and some third-party audio and images were removed
+      for licensing, so the public project builds silent with a few unset sprites.
+    </p>
+    <p>
+      <ExternalLink href="https://github.com/MustafaSPN/kelimetriks" standalone>
+        Kelimetriks on GitHub
+      </ExternalLink>
+    </p>
+  </CaseSection>
+</CaseStudyLayout>
+
+<style>
+  .bullets { display: grid; gap: var(--s4); }
+
+  .bullets li {
+    position: relative;
+    padding-left: var(--s5);
+    color: var(--text-secondary);
+  }
+
+  .bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 8px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .note {
+    border-left: 1px solid var(--accent);
+    padding-left: var(--s5);
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+  }
+
+  .code {
+    margin: 0;
+    padding: var(--s5);
+    overflow-x: auto;
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-md);
+    font-family: var(--font-mono);
+    font-size: var(--fs-small);
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  .code code { background: none; border: 0; padding: 0; white-space: pre; }
+
+  .shots {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s5);
+  }
+
+  @media (min-width: 900px) {
+    .shots { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s4); }
+  }
+</style>

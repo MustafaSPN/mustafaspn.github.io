@@ -1,0 +1,299 @@
+---
+import CaseStudyLayout from '../../layouts/CaseStudyLayout.astro';
+import CaseSection from '../../components/CaseSection.astro';
+import Figure from '../../components/Figure.astro';
+import ExternalLink from '../../components/ExternalLink.astro';
+import AppStoreBadge from '../../components/AppStoreBadge.astro';
+import { getProject } from '../../data/projects';
+import { pageUrl } from '../../lib/paths';
+
+import hero from '../../assets/media/afj-hero.jpg';
+import home from '../../assets/media/afj-ingame-home.jpg';
+import game from '../../assets/media/afj-ingame-game.jpg';
+import shop from '../../assets/media/afj-ingame-shop.jpg';
+import collection from '../../assets/media/afj-ingame-collection.jpg';
+
+const project = getProject('astro-flow-jam');
+
+const stack = [
+  { group: 'Game', items: ['Unity 6 (6000.3)', 'C#', 'URP', 'iPhone and iPad'] },
+  { group: 'Content', items: ['Python level pipeline', 'Simulated-player tuning', 'Blender → FBX'] },
+  { group: 'Live ops', items: ['Unity IAP 5', 'Google AdMob', 'Firebase Analytics', 'Crashlytics'] },
+  { group: 'Quality', items: ['Unity Test Framework — 58 tests', 'Headless batch builds', 'Solver-validated levels'] },
+];
+
+const screens = [
+  { image: home, alt: 'Home screen: the level map with planets, lives and coins.', caption: 'Home — level map' },
+  { image: game, alt: 'Level 88: a pixel snowman inside the orbit, the waiting slots, and a hangar board with frozen and one-way blocks.', caption: 'Level 88 — orbit and hangar' },
+  { image: shop, alt: 'The shop with coin packs, bundles and Remove Ads.', caption: 'Shop — packs and bundles' },
+  { image: collection, alt: 'The collection gallery of unlocked hidden illustrations.', caption: 'Collection' },
+];
+
+const mechanics = [
+  ['One-way block', 'Slides only along its arrow, so it can only leave through gates across that axis.'],
+  ['Frozen block', 'Stays put until a set number of other blocks have left.'],
+  ['Key and lock', 'A locked block opens once the block carrying its key has exited.'],
+  ['Asteroids', 'Permanent rocks — or counter asteroids that explode after N exits.'],
+  ['Layered block', 'Two colours: the outer layer launches, the block stays in its inner colour.'],
+];
+
+const boosters = [
+  ['Hangar', '+1 waiting slot and +1 orbit unit, up to three times.'],
+  ['Warp', 'A wormhole sends any block’s rockets straight to the orbit.'],
+  ['Freeze', 'Stops the timer for ten seconds.'],
+  ['UFO', 'Beams up one colour everywhere — board, orbit and picture.'],
+];
+---
+
+<CaseStudyLayout
+  project={project}
+  extraMeta={[
+    { term: 'Status', value: 'v1.0.0 in App Store review' },
+    { term: 'Content', value: '120 levels at launch' },
+  ]}
+  hero={{
+    image: hero,
+    alt: 'Five Astro Flow Jam App Store screenshots: title over a pixel cat, sliding blocks launching rockets, a revealed hidden picture, the UFO booster, and the collection.',
+    caption: 'App Store screenshots.',
+    contain: true,
+    ratio: '21 / 9',
+  }}
+  stack={stack}
+>
+  <CaseSection label="Get the game" aside="iPhone and iPad">
+    <div class="get">
+      <AppStoreBadge url={project.appStoreUrl} appName={project.title} />
+      <ExternalLink href="https://github.com/MustafaSPN/astro-flow-jam" standalone>
+        Source on GitHub
+      </ExternalLink>
+    </div>
+  </CaseSection>
+
+  <CaseSection label="The game in one minute" aside="Two halves, one puzzle">
+    <p class="lead">
+      Every level has two linked halves. At the bottom, a sliding-block hangar: drag each
+      coloured block to the gate of its colour and push it through. At the top, a pixel picture
+      inside a square orbit.
+    </p>
+    <p>
+      When a block leaves the board, each of its cells becomes a rocket that launches onto the
+      orbit and shoots the outermost pixels of its own colour, peeling the picture layer by
+      layer. Clear every pixel and the reward door opens on a hidden illustration for the
+      collection.
+    </p>
+    <p>
+      The tension is in the coupling. The orbit holds five units and a handful of parking slots,
+      so a rocket whose colour is not exposed yet wastes space. The board decides which rockets
+      you can launch, the picture decides which are useful right now, and a timer keeps the
+      pressure on.
+    </p>
+  </CaseSection>
+
+  <CaseSection label="In game" aside="Development build" wide>
+    <div class="shots">
+      {
+        screens.map((s) => (
+          <Figure image={s.image} alt={s.alt} caption={s.caption} contain ratio="9 / 19.5" sizes="(min-width: 900px) 24vw, 45vw" />
+        ))
+      }
+    </div>
+  </CaseSection>
+
+  <CaseSection label="Mechanics and boosters" aside="Introduced one at a time">
+    <p>
+      Rockets fire around 20 shots a second, each at the first pixel of its colour aligned with
+      it. A rocket’s ammo equals its share of that colour’s pixels, so every level balances
+      exactly. New board mechanics arrive gradually, each first on an easy level with a short
+      explainer:
+    </p>
+    <dl class="pairs">
+      {mechanics.map(([t, d]) => (<div class="pair"><dt>{t}</dt><dd>{d}</dd></div>))}
+    </dl>
+    <p>Four boosters, each unlocking at a set level with two free uses:</p>
+    <dl class="pairs">
+      {boosters.map(([t, d]) => (<div class="pair"><dt>{t}</dt><dd>{d}</dd></div>))}
+    </dl>
+  </CaseSection>
+
+  <CaseSection label="Architecture" aside="Rules in Core, presentation in Runtime">
+    <ul class="bullets">
+      <li>
+        <strong>Pure C# core.</strong> Everything that decides an outcome — can this block exit,
+        which pixel does this rocket shoot, is the orbit full, is this level solvable — lives in
+        a Core assembly with no MonoBehaviours. The same rules run in the game, the editor
+        validator, the unit tests and, ported, the Python simulator.
+      </li>
+      <li>
+        <strong>One controller, split by concern.</strong> The level controller is a set of
+        partial classes — exit, boosters, warp, UFO, economy, finale, tutorials — instead of a web
+        of managers referencing each other.
+      </li>
+      <li>
+        <strong>Code-built UI.</strong> HUD, home, shop, collection and popups are built in code,
+        with capsules, gradients and badges generated at runtime. One layout path adapts to every
+        iPhone and iPad aspect ratio.
+      </li>
+      <li>
+        <strong>Single save gateway.</strong> All persistence goes through one class that caches
+        PlayerPrefs reads, which cross into native code on iOS and some of which are polled every
+        frame.
+      </li>
+      <li>
+        <strong>Explicit build flavours.</strong> <code>Debug.isDebugBuild</code> turned out to be
+        true in an iOS release build and exposed the developer menu, so dev tools now hang off
+        scripting defines set per flavour by the build script.
+      </li>
+      <li>
+        <strong>Fail-soft services.</strong> Ads, purchases and Firebase never block play: a
+        missing ad, an offline store or unconfigured telemetry just falls through.
+      </li>
+    </ul>
+  </CaseSection>
+
+  <CaseSection label="Procedural level designer" aside="Picture first, board second">
+    <p class="lead">
+      A Python pipeline of about 4,000 lines generates the levels: picture first, then the board,
+      then simulated players measure the difficulty instead of guessing it.
+    </p>
+    <ol class="steps">
+      <li>
+        <strong>Spec.</strong> A ten-level difficulty wave, a calendar that introduces each
+        mechanic on an easy level and forces it back after a maximum gap, and no repeated
+        subject in the first 100 levels.
+      </li>
+      <li>
+        <strong>Picture.</strong> Rule-based patterns early on; later, image-model art that is
+        re-gridded, de-speckled, outline-opened so edge pixels are shootable, and validated
+        against the spec.
+      </li>
+      <li>
+        <strong>Board.</strong> Pixels split into rockets, rockets grouped into blocks and placed
+        with simulated annealing, gates placed so the picture’s outer layer is reachable first.
+        A solver that mirrors the game rejects anything the expert bot cannot clear.
+      </li>
+      <li>
+        <strong>Simulation.</strong> A noisy bot plays every candidate; the finalists are played
+        by novice, average and good human-like profiles with thinking time, missed colours and
+        impulsive moves. The time limit comes from the average player’s 80th-percentile time,
+        and selection also scores how many useful options each decision point offers.
+      </li>
+      <li>
+        <strong>Import.</strong> A Unity editor importer turns each level into an asset and
+        validates it again with the C# solver.
+      </li>
+    </ol>
+  </CaseSection>
+
+  <CaseSection label="Economy and monetization" aside="Built in from day one">
+    <ul class="bullets">
+      <li>Lives that refill in real time, coins per win, a continue whose price climbs within a level.</li>
+      <li>
+        Unity IAP: coin packs, bundles and Remove Ads. Purchases are granted before they are
+        confirmed and transaction IDs are de-duplicated, so a crash mid-purchase never
+        double-grants or loses an item.
+      </li>
+      <li>AdMob interstitials only after a win from level 20, at most one a minute; rewarded ads are opt-in.</li>
+      <li>
+        Google UMP consent where required, App Tracking Transparency after level 3 rather than at
+        launch. <a class="link" href={pageUrl('/astro-flow-jam/privacy')}>Privacy Policy</a> ·
+        <a class="link" href={pageUrl('/astro-flow-jam/terms')}>Terms of Use</a>
+      </li>
+    </ul>
+  </CaseSection>
+
+  <CaseSection label="Testing and analytics" aside="Tuned from real play">
+    <p>
+      58 automated tests cover board rules and mechanics, targeting, the pixel grid, level
+      validation and generation, the wallet and the save layer, and run headless before every
+      device build. Every shipped level must pass the solver.
+    </p>
+    <p>
+      Firebase events are designed for difficulty tuning: level start and end with result, time,
+      pixels left and boosters, plus the economy and monetization funnel. Each level carries a
+      short content hash, so a regenerated level’s data stays separate from the old version’s.
+      No personal data is sent.
+    </p>
+  </CaseSection>
+</CaseStudyLayout>
+
+<style>
+  .get {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s4) var(--s6);
+  }
+
+  .bullets, .steps { display: grid; gap: var(--s4); }
+
+  .bullets li {
+    position: relative;
+    padding-left: var(--s5);
+    color: var(--text-secondary);
+  }
+
+  .bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 8px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .steps { counter-reset: step; }
+
+  .steps li {
+    position: relative;
+    padding-left: 40px;
+    color: var(--text-secondary);
+    counter-increment: step;
+  }
+
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0.1em;
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--accent-wash);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: var(--fs-label);
+  }
+
+  .pairs { display: grid; gap: var(--s2); margin: 0; }
+
+  .pair {
+    display: grid;
+    gap: 2px;
+    padding: var(--s3) var(--s4);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-md);
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .pair dt { color: var(--text); font-weight: 600; font-size: var(--fs-small); }
+  .pair dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-small); }
+
+  @media (min-width: 640px) {
+    .pair { grid-template-columns: 140px minmax(0, 1fr); gap: var(--s4); align-items: baseline; }
+  }
+
+  .shots {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s5);
+  }
+
+  .shots :global(.media--contain) { padding: 0; }
+
+  @media (min-width: 900px) {
+    .shots { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s4); }
+  }
+</style>

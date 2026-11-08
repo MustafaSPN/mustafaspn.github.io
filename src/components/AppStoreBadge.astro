@@ -1,0 +1,49 @@
+---
+/**
+ * Apple's official "Download on the App Store" badge (public/app-store-badge.svg).
+ * With no URL yet the badge renders dimmed and unlinked, with a status note.
+ */
+import { withBase } from '../lib/paths';
+
+interface Props {
+  url: string | null | undefined;
+  appName: string;
+  /** Shown beside the dimmed badge while there is no URL. */
+  pendingNote?: string;
+}
+
+const { url, appName, pendingNote = 'In App Store review' } = Astro.props;
+const src = withBase('/app-store-badge.svg');
+---
+
+{
+  url ? (
+    <a class="badge" href={url} target="_blank" rel="noopener noreferrer">
+      <img src={src} alt={`Download ${appName} on the App Store`} width="150" height="50" />
+    </a>
+  ) : (
+    <span class="badge badge--pending">
+      <img src={src} alt="" width="150" height="50" aria-hidden="true" />
+      <span class="badge__note chip">{pendingNote}</span>
+    </span>
+  )
+}
+
+<style>
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s3);
+    flex-wrap: wrap;
+    min-height: 44px;
+    text-decoration: none;
+  }
+
+  .badge img { display: block; height: 50px; width: auto; }
+
+  a.badge img { transition: transform 200ms var(--ease), opacity 200ms var(--ease); }
+  a.badge:hover img, a.badge:focus-visible img { transform: translateY(-1px); }
+
+  .badge--pending img { opacity: 0.45; filter: grayscale(1); }
+  .badge__note { color: var(--accent); }
+</style>

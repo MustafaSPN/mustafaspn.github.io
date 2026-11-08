@@ -5,12 +5,13 @@ import Figure from '../../components/Figure.astro';
 import ExternalLink from '../../components/ExternalLink.astro';
 import { getProject } from '../../data/projects';
 
-import hero from '../../assets/media/pictale-hero.jpg';
+import hero from '../../assets/media/pictale-montage.jpg';
 import architecture from '../../assets/media/pictale-architecture.png';
-import upload from '../../assets/media/pictale-upload.jpg';
-import story from '../../assets/media/pictale-story.jpg';
-import customize from '../../assets/media/pictale-customize.jpg';
-import library from '../../assets/media/pictale-library.jpg';
+import s1 from '../../assets/media/pictale-store-01.jpg';
+import s2 from '../../assets/media/pictale-store-02.jpg';
+import s3 from '../../assets/media/pictale-store-03.jpg';
+import s4 from '../../assets/media/pictale-store-04.jpg';
+import s5 from '../../assets/media/pictale-store-05.jpg';
 
 const project = getProject('pictale');
 
@@ -22,10 +23,11 @@ const stack = [
 ];
 
 const shots = [
-  { image: upload, alt: 'Pictale’s upload screen, where a photographed drawing is cropped before generation.', caption: 'Upload a drawing' },
-  { image: story, alt: 'A generated, illustrated story page with the narrated text highlighted word by word.', caption: 'A drawing becomes a narrated story' },
-  { image: customize, alt: 'The story configuration screen, offering themes, a hero name, story length and narrator voices.', caption: 'Choose a theme and a narrator voice' },
-  { image: library, alt: 'The personal story library screen, listing saved stories with favourites and play counts.', caption: 'Library and favourites' },
+  { image: s1, alt: 'Pictale title screen: “Turn drawings into stories”, with the monkey mascot reading a book.', caption: 'Drawings into stories' },
+  { image: s2, alt: 'The story library with favourites, showing illustrated story cards.', caption: 'Library and favourites' },
+  { image: s3, alt: 'Story customisation: choose a theme, a narrator voice and a story length.', caption: 'Theme, voice and length' },
+  { image: s4, alt: 'A child’s dinosaur drawing beside the generated story it became.', caption: 'A drawing becomes a story' },
+  { image: s5, alt: 'The create-story screen for uploading a photographed drawing.', caption: 'Upload any drawing' },
 ];
 ---
 
@@ -37,24 +39,22 @@ const shots = [
   ]}
   hero={{
     image: hero,
-    alt: 'Pictale running on an iPhone, showing a child’s drawing turned into an illustrated, narrated story page.',
-    caption: 'Published App Store listing image, unmodified.',
+    alt: 'Five Pictale App Store screenshots: the title with the monkey mascot, the story library, story customisation, a drawing turned into a story, and the upload screen.',
+    caption: 'App Store screenshots.',
     contain: true,
-    ratio: '16 / 10',
+    ratio: '21 / 9',
   }}
   stack={stack}
 >
   <CaseSection label="Why this is here" aside="Context">
     <p class="lead">
-      This is not my professional direction. It is evidence that I can take a product from
-      nothing to a public release on my own — client, backend, pipeline, billing, store
-      submission — and keep maintaining it.
+      Pictale is evidence that I can take a product from nothing to a public release on my own —
+      client, backend, pipeline, billing, store submission — and keep maintaining it.
     </p>
     <p>
-      The robotics work on this site is where I want to spend my career. Pictale is the
-      demonstration that I can also own the parts of engineering that have nothing to do with
-      vehicles: asynchronous system design, idempotent transaction handling, third-party
-      integration, and shipping something people actually use.
+      It covers the parts of engineering that sit around the core feature: asynchronous system
+      design, idempotent transaction handling, third-party integration, and shipping something
+      people actually use.
     </p>
   </CaseSection>
 
@@ -131,7 +131,7 @@ const shots = [
     </ul>
   </CaseSection>
 
-  <CaseSection label="Product" aside="Published App Store listing images" wide>
+  <CaseSection label="Product" aside="App Store screenshots" wide>
     <div class="shots">
       {
         shots.map((shot) => (
@@ -141,8 +141,7 @@ const shots = [
             caption={shot.caption}
             contain
             ratio="9 / 19.5"
-            zoom
-            sizes="(min-width: 900px) 24vw, 45vw"
+            sizes="(min-width: 900px) 19vw, 45vw"
             widths={[300, 480, 640]}
           />
         ))
@@ -200,7 +199,9 @@ const shots = [
     gap: var(--s5);
   }
 
+  .shots :global(.media--contain) { padding: 0; }
+
   @media (min-width: 900px) {
-    .shots { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s4); }
+    .shots { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s4); }
   }
 </style>

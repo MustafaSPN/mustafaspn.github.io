@@ -3,6 +3,7 @@ import CaseStudyLayout from '../../layouts/CaseStudyLayout.astro';
 import CaseSection from '../../components/CaseSection.astro';
 import ExternalLink from '../../components/ExternalLink.astro';
 import { getProject } from '../../data/projects';
+import bench from '../../assets/media/stm32-bench.jpg';
 
 const project = getProject('stm32-udp');
 
@@ -37,9 +38,16 @@ const protocol = [
     { term: 'Link', value: '100 Mbit switched Ethernet, UDP' },
     { term: 'Measured', value: '1 kHz echo, ten minutes' },
   ]}
+  hero={{
+    image: bench,
+    alt: 'The test bench: a NUCLEO-H723ZG board wired by Ethernet to a Raspberry Pi in a red-and-white case.',
+    caption: 'NUCLEO-H723ZG and Raspberry Pi on the bench.',
+    ratio: '3 / 2',
+    position: 'center 69%',
+  }}
   stack={stack}
 >
-  <!-- ============ measurement panel in place of a hero image ============ -->
+  <!-- ============ measurement panel ============ -->
   <section class="panel reveal" aria-labelledby="measured">
     <div class="section-rule">
       <span class="section-rule__index" aria-hidden="true">§</span>
@@ -386,7 +394,7 @@ const protocol = [
     gap: 0;
     margin-top: var(--s7);
     border: 1px solid var(--rule);
-    border-radius: 2px;
+    border-radius: var(--r-md);
     background: var(--bg-raised);
   }
 
@@ -444,7 +452,7 @@ const protocol = [
     display: flex;
     height: 28px;
     border: 1px solid var(--rule);
-    border-radius: 2px;
+    border-radius: var(--r-md);
     overflow: hidden;
   }
 

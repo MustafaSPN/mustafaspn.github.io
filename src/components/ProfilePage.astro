@@ -1,0 +1,722 @@
+---
+/**
+ * One portfolio page, specialised by a career profile (src/data/profiles.ts).
+ * The general homepage, /robotics and /games all render through this component.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionRule from './SectionRule.astro';
+import ProjectRecord from './ProjectRecord.astro';
+import { site } from '../data/site';
+import { publishedProjects, projectsForTrack, type Project, type RecordVariant } from '../data/projects';
+import { experienceFor, type Profile } from '../data/profiles';
+import { pageUrl, withBase } from '../lib/paths';
+
+interface Props {
+  profile: Profile;
+}
+
+const { profile } = Astro.props;
+
+const stm32Metrics = [
+  { value: '300', unit: 'µs', label: 'Round-trip, host to MCU and back' },
+  { value: '0', label: 'Packets lost in 600,000 at 1 kHz' },
+  { value: '28', unit: 'µs', label: 'MCU receive to transmit, ±1 µs' },
+];
+
+type Entry = { project: Project; variant: RecordVariant };
+
+// Lead projects keep their large templates; the first record of a profile is always
+// the big one. Everything from the other track is shown compact, below.
+function leadEntries(list: Project[]): Entry[] {
+  return list.map((project, i) => {
+    let variant = project.variant;
+    if (i === 0 && variant !== 'feature' && variant !== 'data') variant = 'split';
+    if (i > 0 && (variant === 'feature' || variant === 'compact')) variant = 'split';
+    return { project, variant };
+  });
+}
+
+let primary: Entry[];
+let secondary: Entry[];
+
+if (profile.lead === 'mixed') {
+  // General page: an explicit display order. The first three get large records,
+  // the rest are shown compact, in the same order.
+  const order = [
+    'pathfinder',
+    'astro-flow-jam',
+    'njord',
+    'pictale',
+    'stm32-udp',
+    'motion-detection',
+    'kelimetriks',
+  ];
+  const ordered = order
+    .map((slug) => publishedProjects.find((p) => p.slug === slug))
+    .filter((p): p is Project => Boolean(p));
+  primary = [
+    ...leadEntries(ordered.slice(0, 3)),
+    ...ordered.slice(3).map((project) => ({ project, variant: 'compact' as const })),
+  ];
+  secondary = [];
+} else {
+  const own = projectsForTrack(profile.lead);
+  // Large records for the first three, compact for the rest of the own track.
+  primary = leadEntries(own.slice(0, 3));
+  const ownRest = own.slice(3).map((project) => ({ project, variant: 'compact' as const }));
+  const other = publishedProjects
+    .filter((p) => p.tracks[0] !== profile.lead)
+    .map((project) => ({ project, variant: 'compact' as const }));
+  primary = [...primary];
+  secondary = other;
+  if (ownRest.length) primary.push(...ownRest);
+}
+
+const primaryLarge = primary.filter((e) => e.variant !== 'compact');
+const primaryCompact = primary.filter((e) => e.variant === 'compact');
+const numberOf = (slug: string) => {
+  const order = [...primary, ...secondary].map((e) => e.project.slug);
+  return String(order.indexOf(slug) + 1).padStart(2, '0');
+};
+
+const experience = experienceFor(profile);
+const home = profile.path === '/' ? '' : profile.path;
+const anchor = (id: string) => withBase(`${home}/#${id}`);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: site.name,
+  jobTitle: profile.role,
+  email: `mailto:${site.email}`,
+  url: Astro.site ? new URL(pageUrl(profile.path), Astro.site).href : undefined,
+  address: { '@type': 'PostalAddress', addressLocality: 'Istanbul', addressCountry: 'TR' },
+  sameAs: [site.github, site.linkedin].filter(Boolean),
+  alumniOf: { '@type': 'CollegeOrUniversity', name: 'Bahçeşehir University' },
+};
+
+const doors = [
+  {
+    href: pageUrl('/robotics'),
+    label: 'Robotics',
+    title: 'Autonomous vehicles on real hardware',
+    body: 'ROS 2, Nav2, RTK GNSS localization and embedded control across ground and marine platforms.',
+  },
+  {
+    href: pageUrl('/games'),
+    label: 'Games',
+    title: 'Mobile games, built end to end',
+    body: 'Unity and C# puzzle games with ads, purchases, analytics and Firebase backends.',
+  },
+];
+---
+
+
+<BaseLayout
+  title={profile.pageTitle}
+  description={profile.description}
+  path={profile.path}
+  jsonLd={jsonLd}
+  role={profile.role}
+  home={home}
+>
+  <!-- ========================= HERO ========================= -->
+  <section class="hero">
+    <div class="hero__glow" aria-hidden="true"></div>
+    <div class="hero__grid" aria-hidden="true"></div>
+    <div class="shell hero__shell">
+      <p class="hero__eyebrow chip">
+        <span class="hero__dot" aria-hidden="true"></span>
+        {profile.eyebrow}
+      </p>
+
+      <h1 class="hero__name gradient-text">Mustafa Sepen</h1>
+
+      <ul class="hero__disciplines">
+        {profile.disciplines.map((d) => <li class="chip">{d}</li>)}
+      </ul>
+
+      <div class="hero__lower">
+        <div class="hero__statement-col">
+          <p class="hero__statement">{profile.statement}</p>
+        </div>
+
+        <dl class="hero__rail card">
+          {
+            profile.rail.map((row) => (
+              <div class="hero__rail-row">
+                <dt class="hero__rail-term">{row.term}</dt>
+                <dd class="hero__rail-value">{row.value}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+
+      <div class="hero__actions">
+        <a class="button button--primary" href={anchor('work')}>
+          View selected work
+        </a>
+
+        <div class="hero__links">
+          <a
+            class="link hero__link"
+            href={site.github}
+            rel="me noopener noreferrer"
+            target="_blank">GitHub<span class="arrow" aria-hidden="true">↗</span></a
+          >
+          {
+            site.linkedin && (
+              <a
+                class="link hero__link"
+                href={site.linkedin}
+                rel="me noopener noreferrer"
+                target="_blank">
+                LinkedIn<span class="arrow" aria-hidden="true">↗</span>
+              </a>
+            )
+          }
+          <a class="link hero__link" href={withBase(site.cv)}>CV</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {
+    profile.id === 'general' && (
+      <section class="doors-section">
+        <div class="shell doors">
+          {doors.map((d) => (
+            <a class="door card" href={d.href}>
+              <span class="door__label chip">{d.label}</span>
+              <span class="door__title">{d.title}</span>
+              <span class="door__body">{d.body}</span>
+              <span class="door__cta">
+                View {d.label.toLowerCase()} portfolio <span aria-hidden="true">→</span>
+              </span>
+            </a>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <!-- ========================= WORK ========================= -->
+  <section class="section" id="work">
+    <div class="shell">
+      <SectionRule index="01" label={profile.workLabel} />
+
+      <div class="work">
+        {
+          primaryLarge.map((e) => (
+            <ProjectRecord
+              project={e.project}
+              variant={e.variant}
+              number={numberOf(e.project.slug)}
+              metrics={e.project.slug === 'stm32-udp' ? stm32Metrics : []}
+            />
+          ))
+        }
+      </div>
+
+      {
+        primaryCompact.length > 0 && (
+          <div class="work-secondary">
+            {primaryCompact.map((e) => (
+              <ProjectRecord
+                project={e.project}
+                variant="compact"
+                number={numberOf(e.project.slug)}
+                metrics={e.project.slug === 'stm32-udp' ? stm32Metrics : []}
+              />
+            ))}
+          </div>
+        )
+      }
+
+      {
+        secondary.length > 0 && (
+          <div class="work-other">
+            {profile.otherWorkLabel && (
+              <h3 class="work-other__label">{profile.otherWorkLabel}</h3>
+            )}
+            <div class="work-secondary work-secondary--other">
+              {secondary.map((e) => (
+                <ProjectRecord
+                project={e.project}
+                variant="compact"
+                number={numberOf(e.project.slug)}
+                metrics={e.project.slug === 'stm32-udp' ? stm32Metrics : []}
+              />
+              ))}
+            </div>
+          </div>
+        )
+      }
+    </div>
+  </section>
+
+  <!-- ====================== EXPERIENCE ====================== -->
+  <section class="section" id="experience">
+    <div class="shell">
+      <SectionRule index="02" label="Experience" />
+
+      <ol class="experience">
+        {
+          experience.map((item) => (
+            <li class="experience__row reveal">
+              <span class="experience__node" aria-hidden="true"></span>
+              <p class="experience__period mono">{item.period}</p>
+              <div class="experience__detail">
+                <h3 class="experience__role h3">{item.role}</h3>
+                <p class="experience__org">{item.org}</p>
+                <p class="experience__scope">{item.scope}</p>
+                {item.scope2 && <p class="experience__scope">{item.scope2}</p>}
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- =================== ENGINEERING FOCUS =================== -->
+  <section class="section" id="focus">
+    <div class="shell">
+      <SectionRule index="03" label="Engineering focus" />
+
+      <div class="focus">
+        {
+          profile.focus.map((group) => (
+            <section class="focus__group card reveal">
+              <h3 class="focus__domain">{group.domain}</h3>
+              <ul class="focus__items">
+                {group.items.map((item) => (
+                  <li class="chip">{item}</li>
+                ))}
+              </ul>
+            </section>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= ABOUT ========================= -->
+  <section class="section" id="about">
+    <div class="shell">
+      <SectionRule index="04" label="About" />
+
+      <div class="rail about card">
+        <p class="about__aside mono">
+          {profile.aboutAside.split('\n').map((line, i) => (i ? [<br />, line] : line))}
+        </p>
+
+        <div class="about__body prose reveal">
+          <p class="lead">{profile.about.lead}</p>
+          {profile.about.paragraphs.map((p) => <p>{p}</p>)}
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* ---------------- hero ---------------- */
+
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding-top: clamp(64px, 11vw, 140px);
+    padding-bottom: clamp(56px, 8vw, 112px);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .hero__shell { position: relative; z-index: 1; }
+
+  /* Two soft radial glows behind the name. */
+  .hero__glow {
+    position: absolute;
+    inset: -20% -10% auto -10%;
+    height: 760px;
+    background:
+      radial-gradient(40% 50% at 22% 30%, rgba(124, 58, 237, 0.28), transparent 70%),
+      radial-gradient(30% 40% at 78% 18%, rgba(232, 121, 249, 0.14), transparent 70%);
+    pointer-events: none;
+  }
+
+  /* A faint engineering grid, faded out toward the bottom. */
+  .hero__grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 20%, #000 30%, transparent 75%);
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 20%, #000 30%, transparent 75%);
+    pointer-events: none;
+  }
+
+  .hero__eyebrow { margin-bottom: var(--s6); }
+
+  .hero__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.18);
+    animation: pulse 2.4s var(--ease) infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.22); }
+    50% { box-shadow: 0 0 0 7px rgba(52, 211, 153, 0.05); }
+  }
+
+  .hero__name {
+    font-weight: 750;
+    font-size: var(--fs-hero);
+    letter-spacing: -0.055em;
+    line-height: 0.95;
+    margin-bottom: var(--s6);
+    max-width: 10ch;
+    padding-bottom: 0.06em;
+  }
+
+  .hero__disciplines {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s2);
+  }
+
+  .hero__lower {
+    margin-top: var(--s7);
+    display: grid;
+    gap: var(--s6);
+  }
+
+  .hero__statement {
+    max-width: 54ch;
+    font-size: var(--fs-lead);
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+
+  .hero__rail {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    padding: var(--s2);
+    gap: var(--s2);
+    background: rgba(15, 15, 19, 0.7);
+  }
+
+  .hero__rail-row {
+    display: grid;
+    gap: var(--s1);
+    padding: var(--s4);
+    border-radius: var(--r-md);
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  .hero__rail-term {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .hero__rail-value {
+    margin: 0;
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.45;
+  }
+
+  .hero__actions {
+    margin-top: var(--s7);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s4);
+  }
+
+  .hero__links { display: flex; flex-wrap: wrap; gap: var(--s2); }
+
+  .hero__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: 16px;
+    border-radius: var(--r-pill);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 200ms var(--ease), background-color 200ms var(--ease);
+  }
+  .hero__link::after { content: none; }
+  .hero__link:hover, .hero__link:focus-visible { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+
+  @media (min-width: 700px) {
+    .hero__actions { flex-direction: row; align-items: center; gap: var(--s5); }
+  }
+
+  @media (min-width: 1024px) {
+    .hero__lower {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      column-gap: clamp(40px, 6vw, 96px);
+      align-items: start;
+    }
+  }
+
+  @media (max-width: 699px) {
+    .hero__actions .button { width: 100%; }
+    .hero__rail { grid-template-columns: 1fr; }
+  }
+
+  /* ---------------- work ---------------- */
+
+  .work { display: grid; gap: clamp(24px, 3vw, 40px); }
+
+  .work-secondary {
+    display: grid;
+    gap: clamp(24px, 3vw, 40px);
+    margin-top: clamp(24px, 3vw, 40px);
+  }
+
+  @media (min-width: 1024px) {
+    .work-secondary {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: stretch;
+    }
+  }
+
+  .work-other { margin-top: clamp(56px, 7vw, 96px); }
+
+  .work-other__label {
+    display: flex;
+    align-items: center;
+    gap: var(--s4);
+    margin-bottom: var(--s5);
+    font-size: var(--fs-h3);
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: var(--text-secondary);
+  }
+
+  .work-other__label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+
+  .work-other .work-secondary { margin-top: 0; }
+
+  @media (min-width: 1024px) {
+    .work-secondary--other { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  /* ---------------- doors (general page) ---------------- */
+
+  .doors-section { padding-top: clamp(40px, 6vw, 72px); }
+
+  .doors { display: grid; gap: var(--s4); }
+
+  .door {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    align-content: start;
+    justify-items: start;
+    gap: var(--s3);
+    padding: clamp(24px, 3.5vw, 40px);
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 240ms var(--ease), transform 240ms var(--ease), background-color 240ms var(--ease);
+  }
+
+  .door::before {
+    content: '';
+    position: absolute;
+    inset: -40% -20% auto auto;
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(closest-side, rgba(124, 58, 237, 0.22), transparent);
+    pointer-events: none;
+  }
+
+  .door:hover, .door:focus-visible {
+    border-color: rgba(167, 139, 250, 0.4);
+    background: var(--card-hover);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .door:hover { transform: translateY(-2px); }
+  }
+
+  .door__label { color: var(--accent); }
+
+  .door__title {
+    margin-top: var(--s2);
+    font-size: clamp(1.4rem, 2.6vw, 1.9rem);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.12;
+    max-width: 18ch;
+  }
+
+  .door__body { color: var(--text-secondary); max-width: 46ch; }
+
+  .door__cta {
+    margin-top: var(--s3);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding-inline: 16px;
+    border-radius: var(--r-pill);
+    background: rgba(255, 255, 255, 0.06);
+    font-size: var(--fs-small);
+    font-weight: 500;
+    transition: background-color 240ms var(--ease);
+  }
+
+  .door:hover .door__cta, .door:focus-visible .door__cta { background: var(--accent-strong); color: #fff; }
+
+  @media (min-width: 768px) {
+    .doors { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  /* ---------------- experience (timeline) ---------------- */
+
+  .experience {
+    position: relative;
+    display: grid;
+    gap: var(--s4);
+    padding-left: 28px;
+  }
+
+  .experience::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 10px;
+    bottom: 10px;
+    width: 1px;
+    background: linear-gradient(180deg, var(--accent), var(--rule) 40%);
+  }
+
+  .experience__row {
+    position: relative;
+    display: grid;
+    gap: var(--s2);
+    padding: var(--s5);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-lg);
+    background: var(--card);
+    transition: border-color 220ms var(--ease), background-color 220ms var(--ease);
+  }
+
+  .experience__row:hover { border-color: var(--rule-strong); background: var(--card-hover); }
+
+  .experience__node {
+    position: absolute;
+    left: -28px;
+    top: 30px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+  }
+
+  .experience__row:first-child .experience__node {
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-wash);
+  }
+
+  .experience__period { color: var(--text-muted); white-space: nowrap; font-size: var(--fs-label); }
+
+  .experience__role { font-weight: 650; letter-spacing: -0.02em; }
+
+  .experience__org {
+    margin-top: 2px;
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .experience__scope {
+    margin-top: var(--s3);
+    color: var(--text-secondary);
+    max-width: 68ch;
+  }
+
+  .experience__scope + .experience__scope { margin-top: var(--s2); }
+
+  @media (min-width: 900px) {
+    .experience__row {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 9fr);
+      gap: clamp(24px, 3vw, 48px);
+      padding: var(--s6);
+    }
+    .experience__period { padding-top: 0.45em; }
+    .experience__node { top: 38px; }
+  }
+
+  /* ---------------- focus (bento) ---------------- */
+
+  .focus { display: grid; gap: var(--s4); }
+
+  .focus__group {
+    position: relative;
+    overflow: hidden;
+    padding: var(--s6);
+    transition: border-color 220ms var(--ease), transform 220ms var(--ease);
+  }
+
+  .focus__group::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.5;
+  }
+
+  .focus__group:hover { border-color: var(--rule-strong); }
+
+  .focus__domain {
+    font-size: 1.25rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: var(--s5);
+  }
+
+  .focus__items { display: flex; flex-wrap: wrap; gap: var(--s2); }
+
+  @media (min-width: 640px) {
+    .focus { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (min-width: 1024px) {
+    .focus { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    /* Asymmetric bento: wide–narrow over narrow–wide. */
+    .focus > :nth-child(1) { grid-column: span 4; }
+    .focus > :nth-child(2) { grid-column: span 2; }
+    .focus > :nth-child(3) { grid-column: span 2; }
+    .focus > :nth-child(4) { grid-column: span 4; }
+  }
+
+  /* ---------------- about ---------------- */
+
+  .about { padding: clamp(24px, 4vw, 56px); }
+  .about__aside { color: var(--text-muted); line-height: 1.7; }
+  .about__body { max-width: var(--measure); }
+</style>
