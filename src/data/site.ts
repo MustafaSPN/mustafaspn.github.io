@@ -16,7 +16,7 @@ export const site = {
     'and embedded integration for ground and surface vehicles. ROS 2, Nav2, sensor ' +
     'fusion, C++ and Python.',
   location: 'Istanbul, Türkiye',
-  email: 'mustafaspn@hotmail.com',
+  email: 'mustafa@sepen.dev',
   github: 'https://github.com/MustafaSPN',
   /** Production domain. Displayed in the footer colophon and used in structured data. */
   domain: 'sepen.dev',
