@@ -84,7 +84,7 @@ export const projects: Project[] = [
     platform: 'iOS · iPadOS · Unity 6 · URP',
     tech: ['Unity 6', 'C#', 'Python', 'Blender', 'Unity IAP', 'AdMob', 'Firebase'],
     repo: 'https://github.com/MustafaSPN/astro-flow-jam',
-    appStoreUrl: null,
+    appStoreUrl: 'https://apps.apple.com/app/astro-flow-jam/id6832245906',
     image: afjHero,
     imageRatio: '23 / 10',
     imageAlt:

@@ -70,8 +70,8 @@ export const experience: ExperienceItem[] = [
     org: 'Astro Flow Jam · Pictale',
     period: '2026 — Present',
     scope:
-      'Two products built alone: Pictale, a Flutter app live on the App Store, and Astro ' +
-      'Flow Jam, a Unity puzzle game for iPhone and iPad.',
+      'Two products built and shipped alone, both live on the App Store: Pictale, a Flutter ' +
+      'app, and Astro Flow Jam, a Unity puzzle game for iPhone and iPad.',
     scope2:
       'Everything around the code as well — ads and in-app purchases, analytics and crash ' +
       'reporting, privacy compliance and App Store submission.',
@@ -271,7 +271,7 @@ export const profiles: Record<Profile['id'], Profile> = {
       'in-app purchases, analytics and leaderboards — backed by a systems-engineering ' +
       'background in real-time C++.',
     rail: [
-      { term: 'Building', value: 'Astro Flow Jam — iPhone & iPad' },
+      { term: 'Shipped', value: 'Astro Flow Jam — App Store' },
       { term: 'Engine', value: 'Unity · C#' },
       { term: 'Live ops', value: 'AdMob · IAP · Firebase' },
       { term: 'Based', value: 'Istanbul, Türkiye' },
@@ -289,7 +289,7 @@ export const profiles: Record<Profile['id'], Profile> = {
         'My first game was Kelimetriks, a Turkish word-puzzle game I built as the final ' +
           'project of a Unity internship — falling letters, a dictionary lookup fast enough to ' +
           'run on every tap, pooled tiles and a live leaderboard. Astro Flow Jam is the next ' +
-          'step: a puzzle game for iPhone and iPad that I am building and publishing alone, ' +
+          'step: a puzzle game for iPhone and iPad that I built and published alone, ' +
           'with ads, purchases, analytics and crash reporting in place.',
         'My day job is robotics, and it shows in how I work on games: I care about frame ' +
           'budgets, data structures and what actually happens on the hardware. I write C# for ' +
